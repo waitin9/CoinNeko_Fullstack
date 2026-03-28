@@ -5,7 +5,7 @@ import '../models/user_model.dart';
 import 'auth_service.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000/api';
+  static const String baseUrl = 'https://coinneko-fullstack.onrender.com/api';
 
   final AuthService _authService;
 
