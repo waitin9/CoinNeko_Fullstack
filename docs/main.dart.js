@@ -44838,9 +44838,9 @@ return A.aAn(A.dN(new A.dQ(B.CF,new A.bk(B.kk,A.d5(f,B.v,B.A,B.x),g),g),g,g),g,B
 a79(){var s=this.w
 s===$&&A.a()
 return A.h0(s,new A.aqo(this),B.XX)},
-a76(a){var s=a.e,r=this.e,q=!r,p=q&&s>0,o=a.d
-q=q&&o>=50
-return A.aH_(B.Bx,A.b([new A.FH("\ud83c\udf9f\ufe0f \u4f7f\u7528\u626d\u86cb\u5238","\u5269\u9918 "+s+" \u5f35",B.a5,p,r,new A.aqm(this),null),new A.FH("\ud83e\ude99 \u4f7f\u7528 50 \u91d1\u5e63","\u5269\u9918 "+o+" \u679a",B.d_,q,!1,new A.aqn(this),null)],t.p),12,12)}}
+a76(a){var s=a.d,r=this.e,q=!r,p=q&&s>=50,o=a.e
+q=q&&o>0
+return A.aH_(B.Bx,A.b([new A.FH("\ud83e\ude99 \u4f7f\u7528 50 \u91d1\u5e63","\u5269\u9918 "+s+" \u679a",B.d_,p,!1,new A.aqm(this),null),new A.FH("\ud83c\udf9f\ufe0f \u4f7f\u7528\u626d\u86cb\u5238","\u5269\u9918 "+o+" \u5f35",B.a5,q,r,new A.aqn(this),null)],t.p),12,12)}}
 A.aqp.prototype={
 $0(){var s=this.a
 s.e=!0
@@ -44865,10 +44865,10 @@ s=r.a
 return A.aAF(b,new A.j(0,r.b.a0(0,s.gq(s))))},
 $S:202}
 A.aqm.prototype={
-$0(){return this.a.us(!1)},
+$0(){return this.a.us(!0)},
 $S:0}
 A.aqn.prototype={
-$0(){return this.a.us(!0)},
+$0(){return this.a.us(!1)},
 $S:0}
 A.Ha.prototype={
 G(a){var s=this,r=null,q=A.c1(20)

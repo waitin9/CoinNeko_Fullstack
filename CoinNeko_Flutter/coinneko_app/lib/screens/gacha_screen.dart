@@ -179,14 +179,7 @@ class _GachaScreenState extends State<GachaScreen>
       runSpacing: 12,
       alignment: WrapAlignment.center,
       children: [
-        _GachaButton(
-          label: '🎟️ 使用扭蛋券',
-          subtitle: '剩餘 ${user.gachaTickets} 張',
-          color: AppColors.purple,
-          enabled: !_isPulling && user.gachaTickets > 0,
-          isLoading: _isPulling,
-          onPressed: () => _pull(useCoins: false),
-        ),
+        
         _GachaButton(
           label: '🪙 使用 50 金幣',
           subtitle: '剩餘 ${user.coins} 枚',
@@ -194,6 +187,14 @@ class _GachaScreenState extends State<GachaScreen>
           enabled: !_isPulling && user.coins >= 50,
           isLoading: false,
           onPressed: () => _pull(useCoins: true),
+        ),
+        _GachaButton(
+          label: '🎟️ 使用扭蛋券',
+          subtitle: '剩餘 ${user.gachaTickets} 張',
+          color: AppColors.purple,
+          enabled: !_isPulling && user.gachaTickets > 0,
+          isLoading: _isPulling,
+          onPressed: () => _pull(useCoins: false),
         ),
       ],
     );
