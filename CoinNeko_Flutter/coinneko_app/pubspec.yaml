@@ -1,0 +1,47 @@
+# frontend/pubspec.yaml
+name: coinneko_app
+description: CoinNeko 記帳貓 - 記帳與抽卡系統
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP 請求
+  http: ^1.2.1
+
+  # 安全本地儲存 (存 JWT token)
+  flutter_secure_storage: ^9.2.2
+
+  # 狀態管理
+  provider: ^6.1.2
+
+  # 路由
+  go_router: ^14.2.7
+
+  # 動畫
+  animate_do: ^3.3.4
+
+  # 圖示
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+    # fonts:
+    # - family: Nunito
+    #   fonts:
+    #     - asset: assets/fonts/Nunito-Regular.ttf
+    #     - asset: assets/fonts/Nunito-Bold.ttf
+    #       weight: 700
+    #     - asset: assets/fonts/Nunito-ExtraBold.ttf
+    #       weight: 800
