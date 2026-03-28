@@ -45559,7 +45559,7 @@ case 4:m=b
 if(m==null){q=null
 s=1
 break}p=6
-j=A.dg("http://localhost:8000/api/auth/refresh/")
+j=A.dg("https://coinneko-fullstack.onrender.com/api/auth/refresh/")
 i=t.N
 h=A.ao(["Content-Type","application/json"],i,i)
 s=9
@@ -45605,7 +45605,7 @@ if(l==null){n=[1]
 s=5
 break}j=t.N
 s=8
-return A.I(A.xt(A.dg("http://localhost:8000/api/auth/me/"),A.ao(["Authorization","Bearer "+l],j,j)),$async$pk)
+return A.I(A.xt(A.dg("https://coinneko-fullstack.onrender.com/api/auth/me/"),A.ao(["Authorization","Bearer "+l],j,j)),$async$pk)
 case 8:k=b
 s=k.b===200?9:11
 break
@@ -45639,7 +45639,7 @@ var $async$wG=A.P(function(a1,a2){if(a1===1){o.push(a2)
 s=p}for(;;)switch(s){case 0:m.b=!0
 m.au()
 p=4
-i=A.dg("http://localhost:8000/api/auth/register/")
+i=A.dg("https://coinneko-fullstack.onrender.com/api/auth/register/")
 h=t.N
 g=A.ao(["Content-Type","application/json"],h,h)
 s=7
@@ -45693,7 +45693,7 @@ var $async$wh=A.P(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:m.b=!0
 m.au()
 p=4
-i=A.dg("http://localhost:8000/api/auth/login/")
+i=A.dg("https://coinneko-fullstack.onrender.com/api/auth/login/")
 h=t.N
 g=A.ao(["Content-Type","application/json"],h,h)
 s=7
@@ -45753,7 +45753,7 @@ case 3:i=b
 s=j!=null&&i!=null?4:5
 break
 case 4:q=7
-n=A.dg("http://localhost:8000/api/auth/logout/")
+n=A.dg("https://coinneko-fullstack.onrender.com/api/auth/logout/")
 m=t.N
 l=A.ao(["Content-Type","application/json","Authorization","Bearer "+i],m,m)
 s=10

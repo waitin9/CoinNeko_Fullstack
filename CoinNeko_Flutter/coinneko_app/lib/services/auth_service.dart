@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
-  static const String _baseUrl = 'http://localhost:8000/api';
+  static const String _baseUrl = 'https://coinneko-fullstack.onrender.com/api';
   static const _storage = FlutterSecureStorage();
 
   static const _accessKey = 'access_token';
