@@ -17,8 +17,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
   @override
   void initState() {
     super.initState();
-    // ★ 用 Future.microtask 取代 addPostFrameCallback
-    // 確保 Provider 樹已建立完成再觸發載入
     Future.microtask(() {
       if (!mounted) return;
       final provider = context.read<CollectionProvider>();
@@ -32,7 +30,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<CollectionProvider>();
 
-    // ── 載入中（且尚未初始化）──
     if (!provider.initialized) {
       return Center(
         child: Column(
@@ -49,7 +46,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
       );
     }
 
-    // ── 錯誤狀態 ──
     if (provider.error != null && provider.species.isEmpty) {
       return Center(
         child: Column(
@@ -117,11 +113,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverGrid(
+              // ★ 卡片變大
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 150,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.68,
+                maxCrossAxisExtent: 180,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.78,
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
@@ -144,10 +141,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 }
 
-// ──────────────────────────────────────────────
-// _CatCard
-// ──────────────────────────────────────────────
-
 class _CatCard extends StatelessWidget {
   final CatSpecies species;
   final UserCat? userCat;
@@ -161,86 +154,91 @@ class _CatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: isLocked ? 0.35 : 1.0,
-      duration: const Duration(milliseconds: 300),
+    // ★ 未獲得：純灰色方塊 + 問號
+    if (isLocked) {
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0E0E0),
+            borderRadius: BorderRadius.circular(AppRadius.catCard),
+            boxShadow: AppShadows.card,
+          ),
+          child: const Center(
+            child: Text(
+              '?',
+              style: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFBDBDBD),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ★ 已獲得：正常顯示
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
       child: Container(
         decoration: BoxDecoration(
-          color: isLocked ? AppColors.card : null,
-          gradient: !isLocked
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: RarityHelper.cardGradient(species.rarity),
-                )
-              : null,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: RarityHelper.cardGradient(species.rarity),
+          ),
           borderRadius: BorderRadius.circular(AppRadius.catCard),
           boxShadow: AppShadows.card,
         ),
-        child: ColorFiltered(
-          colorFilter: isLocked
-              ? const ColorFilter.matrix([
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0,      0,      0,      1, 0,
-                ])
-              : const ColorFilter.mode(
-                  Colors.transparent, BlendMode.color),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CatAvatar(
-                            imageUrl: species.imageUrl,
-                            emoji: species.emoji,
-                            size: 60,
-                          ),
-                const SizedBox(height: 6),
-                Text(
-                  species.name,
-                  style: AppTextStyles.catName,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CatAvatar(
+                imageUrl: species.imageUrl,
+                emoji: species.emoji,
+                size: 60,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                species.name,
+                style: AppTextStyles.catName,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                species.jobTitle,
+                style: const TextStyle(
+                    fontSize: 10, color: AppColors.textSub),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: RarityHelper.bgColor(species.rarity),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  species.jobTitle,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSub),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Text(
+                  RarityHelper.label(species.rarity),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: RarityHelper.textColor(species.rarity)),
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: RarityHelper.bgColor(species.rarity),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    RarityHelper.label(species.rarity),
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: RarityHelper.textColor(species.rarity)),
-                  ),
-                ),
-                if (userCat != null) ...[
-                  const SizedBox(height: 4),
-                  _buildStars(userCat!.starLevel),
-                ] else ...[
-                  const SizedBox(height: 4),
-                  const Text('未獲得',
-                      style: TextStyle(
-                          fontSize: 10, color: AppColors.textSub)),
-                ],
+              ),
+              if (userCat != null) ...[
+                const SizedBox(height: 4),
+                _buildStars(userCat!.starLevel),
               ],
-            ),
+            ],
           ),
         ),
       ),

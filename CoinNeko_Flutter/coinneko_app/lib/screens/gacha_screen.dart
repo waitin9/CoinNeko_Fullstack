@@ -18,7 +18,8 @@ class GachaScreen extends StatefulWidget {
 class _GachaScreenState extends State<GachaScreen>
     with TickerProviderStateMixin {
   GachaPullResult? _lastResult;
-  bool _isPulling = false;
+  bool _isPullingTicket = false;
+  bool _isPullingCoins = false;
   String? _error;
 
   late final AnimationController _floatCtrl;
@@ -56,10 +57,16 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   Future<void> _pull({required bool useCoins}) async {
-    if (_isPulling) return;
+    if (useCoins && _isPullingCoins) return;
+    if (!useCoins && _isPullingTicket) return;
+
     setState(() {
-      _isPulling = true;
       _error = null;
+      if (useCoins) {
+        _isPullingCoins = true;
+      } else {
+        _isPullingTicket = true;
+      }
     });
     _popCtrl.reset();
 
@@ -67,10 +74,8 @@ class _GachaScreenState extends State<GachaScreen>
       final api = context.read<ApiService>();
       final result = await api.gachaPull(useCoins: useCoins);
 
-      // 1. 更新使用者金幣/扭蛋券
       context.read<AuthService>().updateUser(result.user);
 
-      // 2. ★ 即時更新圖鑑狀態（不需要切頁重整）★
       context.read<CollectionProvider>().applyGachaResult(
             catSpeciesId: result.cat.id,
             isDuplicate: result.isDuplicate,
@@ -84,7 +89,10 @@ class _GachaScreenState extends State<GachaScreen>
     } catch (e) {
       setState(() => _error = '網路錯誤，請稍後再試');
     } finally {
-      setState(() => _isPulling = false);
+      setState(() {
+        _isPullingCoins = false;
+        _isPullingTicket = false;
+      });
     }
   }
 
@@ -175,27 +183,27 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   Widget _buildButtons(UserModel user) {
+    final isBusy = _isPullingTicket || _isPullingCoins;
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       alignment: WrapAlignment.center,
       children: [
-        
-        _GachaButton(
-          label: '🪙 使用 50 金幣',
-          subtitle: '剩餘 ${user.coins} 枚',
-          color: AppColors.gold,
-          enabled: !_isPulling && user.coins >= 50,
-          isLoading: false,
-          onPressed: () => _pull(useCoins: true),
-        ),
         _GachaButton(
           label: '🎟️ 使用扭蛋券',
           subtitle: '剩餘 ${user.gachaTickets} 張',
           color: AppColors.purple,
-          enabled: !_isPulling && user.gachaTickets > 0,
-          isLoading: _isPulling,
+          enabled: !isBusy && user.gachaTickets > 0,
+          isLoading: _isPullingTicket,
           onPressed: () => _pull(useCoins: false),
+        ),
+        _GachaButton(
+          label: '🪙 使用 50 金幣',
+          subtitle: '剩餘 ${user.coins} 枚',
+          color: AppColors.gold,
+          enabled: !isBusy && user.coins >= 50,
+          isLoading: _isPullingCoins,
+          onPressed: () => _pull(useCoins: true),
         ),
       ],
     );
@@ -237,10 +245,10 @@ class _GachaScreenState extends State<GachaScreen>
         child: Column(
           children: [
             CatAvatar(
-                        imageUrl: cat.imageUrl,
-                        emoji: cat.emoji,
-                        size: 100,
-                      ),
+              imageUrl: cat.imageUrl,
+              emoji: cat.emoji,
+              size: 100,
+            ),
             const SizedBox(height: 10),
             _RarityBadge(rarity: rarity, large: true),
             const SizedBox(height: 12),
@@ -348,10 +356,6 @@ class _GachaScreenState extends State<GachaScreen>
   }
 }
 
-// ──────────────────────────────────────────────
-// 子元件（與原版完全相同）
-// ──────────────────────────────────────────────
-
 class _ResourceChip extends StatelessWidget {
   final String emoji;
   final String label;
@@ -401,46 +405,62 @@ class _GachaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onPressed : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        decoration: BoxDecoration(
-          color: enabled ? color : color.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(AppRadius.button),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
+    return MouseRegion(
+      cursor: enabled
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.forbidden,
+      child: GestureDetector(
+        onTap: enabled ? onPressed : null,
+        child: Container(
+          width: 180,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          decoration: BoxDecoration(
+            color: enabled ? color : color.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(AppRadius.button),
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
                       color: color.withOpacity(0.3),
                       blurRadius: 12,
-                      offset: const Offset(0, 4))
-                ]
-              : [],
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [],
+          ),
+          child: isLoading
+              ? const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Nunito',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(label,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15)),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
       ),
     );
   }
