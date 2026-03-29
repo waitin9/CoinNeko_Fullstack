@@ -161,27 +161,29 @@ class _GachaScreenState extends State<GachaScreen>
     );
   }
 
+  // ★ 資源顯示：扭蛋券在左，金幣在右（對應按鈕順序）
   Widget _buildResourceRow(UserModel user) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _ResourceChip(
-          emoji: '🪙',
-          label: '${user.coins} 金幣',
-          color: AppColors.gold,
-          bgColor: AppColors.goldLight,
-        ),
-        const SizedBox(width: 12),
         _ResourceChip(
           emoji: '🎟️',
           label: '${user.gachaTickets} 扭蛋券',
           color: AppColors.purple,
           bgColor: AppColors.purpleLight,
         ),
+        const SizedBox(width: 12),
+        _ResourceChip(
+          emoji: '🪙',
+          label: '${user.coins} 金幣',
+          color: AppColors.gold,
+          bgColor: AppColors.goldLight,
+        ),
       ],
     );
   }
 
+  // ★ 按鈕順序：扭蛋券在左，金幣在右
   Widget _buildButtons(UserModel user) {
     final isBusy = _isPullingTicket || _isPullingCoins;
     return Wrap(
@@ -189,6 +191,7 @@ class _GachaScreenState extends State<GachaScreen>
       runSpacing: 12,
       alignment: WrapAlignment.center,
       children: [
+        // ★ 扭蛋券按鈕在上/左
         _GachaButton(
           label: '🎟️ 使用扭蛋券',
           subtitle: '剩餘 ${user.gachaTickets} 張',
@@ -197,6 +200,7 @@ class _GachaScreenState extends State<GachaScreen>
           isLoading: _isPullingTicket,
           onPressed: () => _pull(useCoins: false),
         ),
+        // ★ 金幣按鈕在下/右
         _GachaButton(
           label: '🪙 使用 50 金幣',
           subtitle: '剩餘 ${user.coins} 枚',

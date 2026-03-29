@@ -113,12 +113,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverGrid(
-              // ★ 卡片變大
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 180,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
-                childAspectRatio: 0.78,
+                mainAxisExtent: 200, // ★ 固定卡片高度，不會溢出
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
@@ -154,7 +153,6 @@ class _CatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ★ 未獲得：純灰色方塊 + 問號
     if (isLocked) {
       return MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -178,7 +176,6 @@ class _CatCard extends StatelessWidget {
       );
     }
 
-    // ★ 已獲得：正常顯示
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Container(
@@ -191,54 +188,67 @@ class _CatCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.catCard),
           boxShadow: AppShadows.card,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CatAvatar(
-                imageUrl: species.imageUrl,
-                emoji: species.emoji,
-                size: 60,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                species.name,
-                style: AppTextStyles.catName,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                species.jobTitle,
-                style: const TextStyle(
-                    fontSize: 10, color: AppColors.textSub),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: RarityHelper.bgColor(species.rarity),
-                  borderRadius: BorderRadius.circular(20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.catCard),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 圖片填滿上半部
+                Expanded(
+                  child: Center(
+                    child: CatAvatar(
+                      imageUrl: species.imageUrl,
+                      emoji: species.emoji,
+                      size: 72,
+                    ),
+                  ),
                 ),
-                child: Text(
-                  RarityHelper.label(species.rarity),
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: RarityHelper.textColor(species.rarity)),
-                ),
-              ),
-              if (userCat != null) ...[
                 const SizedBox(height: 4),
-                _buildStars(userCat!.starLevel),
+                // 名字
+                Text(
+                  species.name,
+                  style: AppTextStyles.catName,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                // 職稱
+                Text(
+                  species.jobTitle,
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.textSub),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                // 稀有度
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: RarityHelper.bgColor(species.rarity),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    RarityHelper.label(species.rarity),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: RarityHelper.textColor(species.rarity)),
+                  ),
+                ),
+                // 星星
+                if (userCat != null) ...[
+                  const SizedBox(height: 4),
+                  _buildStars(userCat!.starLevel),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
