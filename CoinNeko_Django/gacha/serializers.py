@@ -8,7 +8,7 @@ class CatSpeciesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CatSpecies
-        fields = ('id', 'name', 'job_title', 'rarity', 'rarity_display', 'emoji', 'description')
+        fields = ('id', 'name', 'job_title', 'rarity', 'rarity_display', 'emoji', 'description' , 'image_url')
 
 
 class UserCatSerializer(serializers.ModelSerializer):
