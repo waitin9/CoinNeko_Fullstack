@@ -23,7 +23,7 @@ class UserCatSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserCat
         fields = ('id', 'cat_species_id', 'name', 'job_title', 'rarity',
-                  'emoji', 'description', 'star_level', 'acquired_at')
+                  'emoji', 'description', 'star_level', 'acquired_at' , 'image_url')
 
 
 class GachaHistorySerializer(serializers.ModelSerializer):

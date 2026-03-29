@@ -16,7 +16,7 @@ class CatSpecies(models.Model):
     emoji = models.CharField(max_length=10)
     description = models.TextField(blank=True, default='')
 
-    image_url = models.URLField(blank=True, null=True, default=None)
+    image_url = models.URLField(max_length=500, blank=True, null=True, default=None)
 
     class Meta:
         db_table = 'cat_species'
