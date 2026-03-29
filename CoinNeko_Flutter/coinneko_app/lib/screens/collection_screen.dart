@@ -241,21 +241,20 @@ class _CatCard extends StatelessWidget {
                         color: RarityHelper.textColor(species.rarity)),
                   ),
                 ),
-                const SizedBox(height: 6),
-                // ★ 星星固定在底部，不會被擠出去
+                const SizedBox(height: 4),
+                
                 if (userCat != null)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: List.generate(5, (i) {
-                      return Text(
-                        i < userCat!.starLevel ? '★' : '☆',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: i < userCat!.starLevel
-                              ? AppColors.gold
-                              : AppColors.border,
-                        ),
+                      // 將原本的 Text 替換為 Icon，確保圖示完美對齊
+                      return Icon(
+                        i < userCat!.starLevel ? Icons.star : Icons.star_border,
+                        size: 14, // 調整大小以符合原本 12pt 文字的視覺比例
+                        color: i < userCat!.starLevel
+                            ? AppColors.gold
+                            : AppColors.border,
                       );
                     }),
                   ),
