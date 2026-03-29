@@ -195,9 +195,9 @@ class _CatCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
             child: Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center, // 🌟 把 start 改成 center
+                crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // 圖片
                 CatAvatar(
