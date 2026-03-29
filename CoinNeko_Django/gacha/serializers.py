@@ -17,6 +17,8 @@ class UserCatSerializer(serializers.ModelSerializer):
     rarity = serializers.CharField(source='cat_species.rarity', read_only=True)
     emoji = serializers.CharField(source='cat_species.emoji', read_only=True)
     description = serializers.CharField(source='cat_species.description', read_only=True)
+    image_url = serializers.URLField(
+        source='cat_species.image_url', read_only=True, allow_null=True)
 
     class Meta:
         model = UserCat
