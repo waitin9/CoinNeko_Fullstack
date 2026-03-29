@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../providers/collection_provider.dart';
 import '../models/user_model.dart';
+import '../widgets/cat_avatar.dart';
 
 class GachaScreen extends StatefulWidget {
   const GachaScreen({super.key});
@@ -235,7 +236,11 @@ class _GachaScreenState extends State<GachaScreen>
         ),
         child: Column(
           children: [
-            Text(cat.emoji, style: const TextStyle(fontSize: 72)),
+            CatAvatar(
+                        imageUrl: cat.imageUrl,
+                        emoji: cat.emoji,
+                        size: 100,
+                      ),
             const SizedBox(height: 10),
             _RarityBadge(rarity: rarity, large: true),
             const SizedBox(height: 12),

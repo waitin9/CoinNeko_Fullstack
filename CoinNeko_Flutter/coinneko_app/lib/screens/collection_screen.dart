@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/collection_provider.dart';
 import '../models/user_model.dart';
+import '../widgets/cat_avatar.dart';
 
 class CollectionScreen extends StatefulWidget {
   const CollectionScreen({super.key});
@@ -120,7 +121,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                 maxCrossAxisExtent: 150,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 0.75,
+                childAspectRatio: 0.68,
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
@@ -191,8 +192,11 @@ class _CatCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(species.emoji,
-                    style: const TextStyle(fontSize: 36)),
+                CatAvatar(
+                            imageUrl: species.imageUrl,
+                            emoji: species.emoji,
+                            size: 60,
+                          ),
                 const SizedBox(height: 6),
                 Text(
                   species.name,

@@ -38,6 +38,7 @@ class CatSpecies {
   final String rarity;
   final String emoji;
   final String description;
+  final String? imageUrl;
 
   CatSpecies({
     required this.id,
@@ -46,6 +47,7 @@ class CatSpecies {
     required this.rarity,
     required this.emoji,
     required this.description,
+    this.imageUrl,
   });
 
   factory CatSpecies.fromJson(Map<String, dynamic> json) => CatSpecies(
@@ -55,6 +57,7 @@ class CatSpecies {
         rarity: json['rarity'] as String,
         emoji: json['emoji'] as String,
         description: json['description'] as String? ?? '',
+        imageUrl: json['image_url'] as String?,
       );
 }
 
@@ -67,6 +70,7 @@ class UserCat {
   final String emoji;
   final String description;
   final int starLevel;
+  final String? imageUrl;
 
   UserCat({
     required this.id,
@@ -77,6 +81,7 @@ class UserCat {
     required this.emoji,
     required this.description,
     required this.starLevel,
+    this.imageUrl,
   });
 
   factory UserCat.fromJson(Map<String, dynamic> json) => UserCat(
@@ -88,6 +93,7 @@ class UserCat {
         emoji: json['emoji'] as String,
         description: json['description'] as String? ?? '',
         starLevel: json['star_level'] as int,
+        imageUrl: json['image_url'] as String?,
       );
 }
 

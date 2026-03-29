@@ -17,6 +17,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<Transaction>? _transactions;
   List<Category>? _categories;
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -25,23 +26,38 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final api = context.read<ApiService>();
-      final results = await Future.wait([
-        api.getTransactions(),
-        api.getCategories(),
-      ]);
+      // ★ 分開載入，避免一個失敗整個壞掉
+      final transactions = await api.getTransactions();
+      final categories = await api.getCategories();
       setState(() {
-        _transactions = results[0] as List<Transaction>;
-        _categories = results[1] as List<Category>;
+        _transactions = transactions;
+        _categories = categories;
       });
-    } catch (_) {}
-    setState(() => _loading = false);
+    } catch (e) {
+      setState(() => _loadError = e.toString());
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   void _showAddModal() {
-    if (_categories == null) return;
+    // ★ categories 還沒載入就先觸發載入再提示
+    if (_categories == null || _categories!.isEmpty) {
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('類別載入中，請稍後再試'),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -85,30 +101,57 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.purple))
-          : RefreshIndicator(
-              color: AppColors.purple,
-              onRefresh: _load,
-              child: _transactions!.isEmpty
-                  ? const Center(
-                      child: Text('還沒有記帳紀錄\n點下方 + 開始記帳 🐱',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.textSub, height: 1.8)),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                      itemCount: _transactions!.length,
-                      itemBuilder: (_, i) {
-                        final tx = _transactions![i];
-                        return _TxItem(
-                          tx: tx,
-                          onDelete: () async {
-                            await context.read<ApiService>().deleteTransaction(tx.id);
-                            _load();
+          : _loadError != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('😿', style: TextStyle(fontSize: 48)),
+                      const SizedBox(height: 12),
+                      const Text('載入失敗，請下拉重試',
+                          style: TextStyle(color: AppColors.textSub)),
+                      const SizedBox(height: 8),
+                      Text(_loadError!,
+                          style: const TextStyle(
+                              color: AppColors.red, fontSize: 11)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _load,
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.purple),
+                        child: const Text('重新載入',
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: AppColors.purple,
+                  onRefresh: _load,
+                  child: _transactions == null || _transactions!.isEmpty
+                      ? const Center(
+                          child: Text('還沒有記帳紀錄\n點下方 + 開始記帳 🐱',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: AppColors.textSub, height: 1.8)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                          itemCount: _transactions!.length,
+                          itemBuilder: (_, i) {
+                            final tx = _transactions![i];
+                            return _TxItem(
+                              tx: tx,
+                              onDelete: () async {
+                                await context
+                                    .read<ApiService>()
+                                    .deleteTransaction(tx.id);
+                                _load();
+                              },
+                            );
                           },
-                        );
-                      },
-                    ),
-            ),
+                        ),
+                ),
     );
   }
 }
@@ -132,7 +175,6 @@ class _TxItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 類別圖示（對應 .tx-icon）
           Container(
             width: 40,
             height: 40,
@@ -145,8 +187,6 @@ class _TxItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-
-          // 名稱 + 日期
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,8 +204,6 @@ class _TxItem extends StatelessWidget {
               ],
             ),
           ),
-
-          // 金額
           Text(
             '${isIncome ? '+' : '-'}\$${tx.amount.toStringAsFixed(0)}',
             style: TextStyle(
@@ -176,8 +214,6 @@ class _TxItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-
-          // 刪除按鈕
           GestureDetector(
             onTap: onDelete,
             child: const Icon(Icons.close, size: 18, color: AppColors.textSub),
@@ -211,7 +247,11 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedCategoryId = _filtered().first.id;
+    final filtered = _filtered();
+    // ★ 防止 filtered 是空的導致 crash
+    if (filtered.isNotEmpty) {
+      _selectedCategoryId = filtered.first.id;
+    }
   }
 
   List<Category> _filtered() =>
@@ -219,7 +259,15 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
 
   Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text);
-    if (amount == null || amount <= 0) return;
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('請輸入有效金額'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -252,15 +300,23 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   Widget build(BuildContext context) {
     final filtered = _filtered();
 
+    if (filtered.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(40),
+        child: Center(child: Text('找不到類別，請重新整理後再試')),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24, right: 24, top: 24),
+          left: 24,
+          right: 24,
+          top: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 標題
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -271,28 +327,34 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // 收支切換
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
                   onTap: () {
+                    final exp = widget.categories
+                        .where((c) => c.type == 'expense')
+                        .toList();
+                    if (exp.isEmpty) return;
                     setState(() {
                       _type = 'expense';
-                      _selectedCategoryId = _filtered().first.id;
+                      _selectedCategoryId = exp.first.id;
                     });
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: _type == 'expense' ? AppColors.red : AppColors.border,
+                      color: _type == 'expense'
+                          ? AppColors.red
+                          : AppColors.border,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
                       child: Text('支出',
                           style: TextStyle(
-                              color: _type == 'expense' ? Colors.white : AppColors.textSub,
+                              color: _type == 'expense'
+                                  ? Colors.white
+                                  : AppColors.textSub,
                               fontWeight: FontWeight.w700)),
                     ),
                   ),
@@ -302,21 +364,29 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
               Expanded(
                 child: GestureDetector(
                   onTap: () {
+                    final inc = widget.categories
+                        .where((c) => c.type == 'income')
+                        .toList();
+                    if (inc.isEmpty) return;
                     setState(() {
                       _type = 'income';
-                      _selectedCategoryId = _filtered().first.id;
+                      _selectedCategoryId = inc.first.id;
                     });
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: _type == 'income' ? AppColors.green : AppColors.border,
+                      color: _type == 'income'
+                          ? AppColors.green
+                          : AppColors.border,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
                       child: Text('收入',
                           style: TextStyle(
-                              color: _type == 'income' ? Colors.white : AppColors.textSub,
+                              color: _type == 'income'
+                                  ? Colors.white
+                                  : AppColors.textSub,
                               fontWeight: FontWeight.w700)),
                     ),
                   ),
@@ -325,8 +395,6 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             ],
           ),
           const SizedBox(height: 14),
-
-          // 類別選擇
           DropdownButtonFormField<int>(
             value: _selectedCategoryId,
             decoration: const InputDecoration(labelText: '類別'),
@@ -339,24 +407,19 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             onChanged: (v) => setState(() => _selectedCategoryId = v!),
           ),
           const SizedBox(height: 14),
-
-          // 金額
           TextFormField(
             controller: _amountCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-                labelText: '金額', prefixText: '\$ '),
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration:
+                const InputDecoration(labelText: '金額', prefixText: '\$ '),
           ),
           const SizedBox(height: 14),
-
-          // 備註
           TextFormField(
             controller: _noteCtrl,
             decoration: const InputDecoration(labelText: '備註（選填）'),
           ),
           const SizedBox(height: 20),
-
-          // 送出
           SizedBox(
             height: 48,
             child: ElevatedButton(
@@ -369,7 +432,8 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
               ),
               child: _isSubmitting
                   ? const SizedBox(
-                      width: 20, height: 20,
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
                   : const Text('確認記帳 +10 🪙',

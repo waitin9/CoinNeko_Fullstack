@@ -16,6 +16,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   List<Map<String, dynamic>>? _budgets;
   List<Category>? _categories;
   bool _loading = true;
+  String? _loadError;
   String _month = DateTime.now().toIso8601String().substring(0, 7);
 
   @override
@@ -25,19 +26,23 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
     try {
       final api = context.read<ApiService>();
-      final results = await Future.wait([
-        api.getBudgets(month: _month),
-        api.getCategories(),
-      ]);
+      final budgets = await api.getBudgets(month: _month);
+      final categories = await api.getCategories();
       setState(() {
-        _budgets = results[0] as List<Map<String, dynamic>>;
-        _categories = results[1] as List<Category>;
+        _budgets = budgets;
+        _categories = categories;
       });
-    } catch (_) {}
-    setState(() => _loading = false);
+    } catch (e) {
+      setState(() => _loadError = e.toString());
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -50,37 +55,64 @@ class _BudgetScreenState extends State<BudgetScreen> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.purple))
-          : RefreshIndicator(
-              color: AppColors.purple,
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.purple))
+          : _loadError != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('預算管理', style: AppTextStyles.heading2),
-                      Text(_month,
+                      const Text('😿', style: TextStyle(fontSize: 48)),
+                      const SizedBox(height: 12),
+                      const Text('載入失敗，請重試',
+                          style: TextStyle(color: AppColors.textSub)),
+                      const SizedBox(height: 8),
+                      Text(_loadError!,
                           style: const TextStyle(
-                              color: AppColors.textSub, fontWeight: FontWeight.w600)),
+                              color: AppColors.red, fontSize: 11)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _load,
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.purple),
+                        child: const Text('重新載入',
+                            style: TextStyle(color: Colors.white)),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  if (_budgets!.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Text('本月尚未設定預算\n點 + 新增 🐱',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: AppColors.textSub, height: 1.8)),
+                )
+              : RefreshIndicator(
+                  color: AppColors.purple,
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('預算管理', style: AppTextStyles.heading2),
+                          Text(_month,
+                              style: const TextStyle(
+                                  color: AppColors.textSub,
+                                  fontWeight: FontWeight.w600)),
+                        ],
                       ),
-                    )
-                  else
-                    ..._budgets!.map(_buildBudgetItem),
-                ],
-              ),
-            ),
+                      const SizedBox(height: 16),
+                      if (_budgets == null || _budgets!.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40),
+                            child: Text('本月尚未設定預算\n點 + 新增 🐱',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: AppColors.textSub, height: 1.8)),
+                          ),
+                        )
+                      else
+                        ..._budgets!.map(_buildBudgetItem),
+                    ],
+                  ),
+                ),
     );
   }
 
@@ -120,7 +152,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          // 進度條（對應 .progress-bar）
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -136,8 +167,31 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   void _showAddBudgetModal() {
-    if (_categories == null) return;
-    final expenseCategories = _categories!.where((c) => c.type == 'expense').toList();
+    // ★ categories 還沒載入就先觸發載入再提示
+    if (_categories == null || _categories!.isEmpty) {
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('類別載入中，請稍後再試'),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+      return;
+    }
+
+    final expenseCategories =
+        _categories!.where((c) => c.type == 'expense').toList();
+
+    if (expenseCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('找不到支出類別'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
     int selectedId = expenseCategories.first.id;
     final limitCtrl = TextEditingController();
 
@@ -152,7 +206,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
         return Padding(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
-              left: 24, right: 24, top: 24),
+              left: 24,
+              right: 24,
+              top: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,17 +227,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
               DropdownButtonFormField<int>(
                 value: selectedId,
                 decoration: const InputDecoration(labelText: '類別（支出）'),
-                items: expenseCategories.map((c) => DropdownMenuItem(
-                  value: c.id,
-                  child: Text('${c.icon} ${c.name}'),
-                )).toList(),
+                items: expenseCategories
+                    .map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text('${c.icon} ${c.name}'),
+                        ))
+                    .toList(),
                 onChanged: (v) => setModal(() => selectedId = v!),
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: limitCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: '預算上限', prefixText: '\$ '),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: '預算上限', prefixText: '\$ '),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -189,15 +249,40 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     final limit = double.tryParse(limitCtrl.text);
-                    if (limit == null || limit <= 0) return;
-                    await context.read<ApiService>().createBudget(
-                          categoryId: selectedId,
-                          month: _month,
-                          limitAmount: limit,
+                    if (limit == null || limit <= 0) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('請輸入有效金額'),
+                          backgroundColor: AppColors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    try {
+                      await context.read<ApiService>().createBudget(
+                            categoryId: selectedId,
+                            month: _month,
+                            limitAmount: limit,
+                          );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _load();
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text('錯誤：$e'),
+                            backgroundColor: AppColors.red,
+                          ),
                         );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    _load();
+                      }
+                    }
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.purple,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.button),
+                    ),
+                  ),
                   child: const Text('確認設定', style: AppTextStyles.button),
                 ),
               ),

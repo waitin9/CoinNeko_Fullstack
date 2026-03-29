@@ -94,15 +94,16 @@ class CollectionProvider extends ChangeNotifier {
         ),
       );
       final newUserCat = UserCat(
-        id: 0,
-        catSpeciesId: catSpeciesId,
-        name: speciesData.name,
-        jobTitle: speciesData.jobTitle,
-        rarity: speciesData.rarity,
-        emoji: speciesData.emoji,
-        description: speciesData.description,
-        starLevel: 1,
-      );
+          id: 0,
+          catSpeciesId: catSpeciesId,
+          name: speciesData.name,
+          jobTitle: speciesData.jobTitle,
+          rarity: speciesData.rarity,
+          emoji: speciesData.emoji,
+          description: speciesData.description,
+          starLevel: 1,
+          imageUrl: speciesData.imageUrl, // ★ 新增這行
+        );
       _ownedMap[catSpeciesId] = newUserCat;
       _userCats.add(newUserCat);
     }
