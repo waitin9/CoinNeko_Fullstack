@@ -117,7 +117,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                 maxCrossAxisExtent: 180,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
-                mainAxisExtent: 200, // ★ 固定卡片高度，不會溢出
+                mainAxisExtent: 230, // ★ 從 200 改 230，給星星足夠空間
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
@@ -153,6 +153,7 @@ class _CatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 未獲得：灰色 + 問號
     if (isLocked) {
       return MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -176,6 +177,7 @@ class _CatCard extends StatelessWidget {
       );
     }
 
+    // 已獲得
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Container(
@@ -191,22 +193,19 @@ class _CatCard extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.catCard),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 圖片填滿上半部
-                Expanded(
-                  child: Center(
-                    child: CatAvatar(
-                      imageUrl: species.imageUrl,
-                      emoji: species.emoji,
-                      size: 72,
-                    ),
-                  ),
+                // 圖片
+                CatAvatar(
+                  imageUrl: species.imageUrl,
+                  emoji: species.emoji,
+                  size: 72,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 // 名字
                 Text(
                   species.name,
@@ -225,7 +224,7 @@ class _CatCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 // 稀有度
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -242,31 +241,29 @@ class _CatCard extends StatelessWidget {
                         color: RarityHelper.textColor(species.rarity)),
                   ),
                 ),
-                // 星星
-                if (userCat != null) ...[
-                  const SizedBox(height: 4),
-                  _buildStars(userCat!.starLevel),
-                ],
+                const SizedBox(height: 6),
+                // ★ 星星固定在底部，不會被擠出去
+                if (userCat != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (i) {
+                      return Text(
+                        i < userCat!.starLevel ? '★' : '☆',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: i < userCat!.starLevel
+                              ? AppColors.gold
+                              : AppColors.border,
+                        ),
+                      );
+                    }),
+                  ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStars(int level) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (i) {
-        return Text(
-          i < level ? '★' : '☆',
-          style: TextStyle(
-            fontSize: 11,
-            color: i < level ? AppColors.gold : AppColors.border,
-          ),
-        );
-      }),
     );
   }
 }
