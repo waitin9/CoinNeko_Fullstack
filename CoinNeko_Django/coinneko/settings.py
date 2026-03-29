@@ -1,6 +1,8 @@
 # backend/coinneko/settings.py
 from pathlib import Path
 from datetime import timedelta
+import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-replace-this-in-production-coinneko-2024'
@@ -54,10 +56,10 @@ TEMPLATES = [
 ]
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'coinneko.db',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',  
+        conn_max_age=600
+    )
 }
 
 REST_FRAMEWORK = {
