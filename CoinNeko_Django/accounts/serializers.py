@@ -26,7 +26,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data.get('email', ''),
             password=validated_data['password'],
             coins=0,
-            gacha_tickets=1,  # 註冊送 1 張扭蛋券
+            gacha_tickets=10,  # 註冊送 10 張扭蛋券
         )
         return user
 

@@ -33,7 +33,7 @@ class UserCat(models.Model):
         related_name='user_cats'
     )
     cat_species = models.ForeignKey(CatSpecies, on_delete=models.CASCADE)
-    star_level = models.IntegerField(default=10)
+    star_level = models.IntegerField(default=1)
     acquired_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
