@@ -67,9 +67,8 @@ class _GachaScreenState extends State<GachaScreen>
             newStarLevel: result.newStarLevel,
           );
 
-      // ★ 抽完後跳出 Modal
       if (mounted) {
-        _showResultModal(result);
+        _showResultOverlay(result);
       }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -83,14 +82,15 @@ class _GachaScreenState extends State<GachaScreen>
     }
   }
 
-  void _showResultModal(GachaPullResult result) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'gacha_result',
-      barrierColor: Colors.transparent,
-      transitionDuration: Duration.zero,
-      pageBuilder: (ctx, _, __) => _GachaResultOverlay(result: result),
+  void _showResultOverlay(GachaPullResult result) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder: (ctx, _, __) => _GachaResultOverlay(result: result),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
     );
   }
 
@@ -112,7 +112,7 @@ class _GachaScreenState extends State<GachaScreen>
                 const SizedBox(height: 8),
                 _buildResourceRow(user),
                 const SizedBox(height: 24),
-                _buildButtons(user),
+                _buildPullButtons(user),
                 const SizedBox(height: 8),
                 if (_error != null) _buildErrorBanner(),
                 const SizedBox(height: 24),
@@ -128,20 +128,16 @@ class _GachaScreenState extends State<GachaScreen>
   Widget _buildHeader() {
     return const Column(
       children: [
-        Text(
-          '扭蛋機',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: AppColors.text,
-          ),
-        ),
+        Text('扭蛋機',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
+            )),
         SizedBox(height: 4),
-        Text(
-          '抽卡召喚你的財務貓咪夥伴',
-          style: TextStyle(fontSize: 14, color: AppColors.textSub),
-        ),
+        Text('抽卡召喚你的財務貓咪夥伴',
+            style: TextStyle(fontSize: 14, color: AppColors.textSub)),
       ],
     );
   }
@@ -149,10 +145,8 @@ class _GachaScreenState extends State<GachaScreen>
   Widget _buildGachaMachine() {
     return AnimatedBuilder(
       animation: _floatAnim,
-      builder: (_, child) => Transform.translate(
-        offset: Offset(0, _floatAnim.value),
-        child: child,
-      ),
+      builder: (_, child) =>
+          Transform.translate(offset: Offset(0, _floatAnim.value), child: child),
       child: const Text('🎰', style: TextStyle(fontSize: 96)),
     );
   }
@@ -178,7 +172,7 @@ class _GachaScreenState extends State<GachaScreen>
     );
   }
 
-  Widget _buildButtons(UserModel user) {
+  Widget _buildPullButtons(UserModel user) {
     final isBusy = _isPullingTicket || _isPullingCoins;
     return Wrap(
       spacing: 12,
@@ -212,11 +206,11 @@ class _GachaScreenState extends State<GachaScreen>
         color: AppColors.redLight,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        '❌ $_error',
-        style: const TextStyle(
-            color: AppColors.red, fontWeight: FontWeight.w600, fontSize: 13),
-      ),
+      child: Text('❌ $_error',
+          style: const TextStyle(
+              color: AppColors.red,
+              fontWeight: FontWeight.w600,
+              fontSize: 13)),
     );
   }
 
@@ -253,10 +247,9 @@ class _GachaScreenState extends State<GachaScreen>
   }
 }
 
-
-// ──────────────────────────────────────────────
-// ★ 抽卡結果 全螢幕沉浸式覆蓋
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+// ★  全螢幕沉浸式抽卡結果覆蓋層
+// ══════════════════════════════════════════════════════════
 class _GachaResultOverlay extends StatefulWidget {
   final GachaPullResult result;
   const _GachaResultOverlay({required this.result});
@@ -268,13 +261,13 @@ class _GachaResultOverlay extends StatefulWidget {
 class _GachaResultOverlayState extends State<_GachaResultOverlay>
     with TickerProviderStateMixin {
   // 控制器
-  late final AnimationController _bgCtrl;       // 背景暗化
-  late final AnimationController _cardCtrl;     // 卡片彈入
-  late final AnimationController _infoCtrl;     // 資訊淡入
-  late final AnimationController _btnCtrl;      // 按鈕浮現
-  late final AnimationController _rotateCtrl;   // 光芒旋轉
-  late final AnimationController _pulseCtrl;    // 重複按鈕呼吸
-  late final AnimationController _particleCtrl; // 粒子
+  late final AnimationController _bgCtrl;
+  late final AnimationController _cardCtrl;
+  late final AnimationController _infoCtrl;
+  late final AnimationController _btnCtrl;
+  late final AnimationController _rotateCtrl;
+  late final AnimationController _pulseCtrl;
+  late final AnimationController _particleCtrl;
 
   // 動畫
   late final Animation<double> _bgFade;
@@ -289,36 +282,39 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
   void initState() {
     super.initState();
 
-    _bgCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _cardCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _infoCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _btnCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _rotateCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
-    _particleCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _bgCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 280));
+    _cardCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 650));
+    _infoCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 420));
+    _btnCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 320));
+    _rotateCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 14))
+          ..repeat();
+    _pulseCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1100))
+      ..repeat(reverse: true);
+    _particleCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 3))
+          ..repeat();
 
-    _bgFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _bgCtrl, curve: Curves.easeOut),
-    );
+    _bgFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _bgCtrl, curve: Curves.easeOut));
     _cardScale = CurvedAnimation(
-      parent: _cardCtrl,
-      curve: const Cubic(0.175, 0.885, 0.32, 1.275),
-    );
-    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
-      CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut),
-    );
-    _infoFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut),
-    );
-    _infoSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
-      CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut),
-    );
-    _btnFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _btnCtrl, curve: Curves.easeOut),
-    );
-    _pulse = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+        parent: _cardCtrl,
+        curve: const Cubic(0.175, 0.885, 0.32, 1.275));
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut));
+    _infoFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut));
+    _infoSlide = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut));
+    _btnFade = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _btnCtrl, curve: Curves.easeOut));
+    _pulse = Tween<double>(begin: 0.93, end: 1.0).animate(
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _runSequence();
   }
@@ -326,10 +322,10 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
   Future<void> _runSequence() async {
     await _bgCtrl.forward();
     await _cardCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 130));
     await _infoCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 100));
-    await _btnCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 60));
+    _btnCtrl.forward();
   }
 
   @override
@@ -344,241 +340,193 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
     super.dispose();
   }
 
+  Color get _glow {
+    switch (widget.result.cat.rarity) {
+      case 'legendary': return const Color(0xFFFFD700);
+      case 'epic':      return const Color(0xFFB44FE8);
+      case 'rare':      return const Color(0xFF4A90E8);
+      default:          return const Color(0xFF6BCB77);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cat = widget.result.cat;
+    final cat    = widget.result.cat;
     final rarity = cat.rarity;
     final isDupe = widget.result.isDuplicate;
-    final size = MediaQuery.of(context).size;
-    final isWide = size.width > 600;
-
-    // 稀有度對應光芒顏色
-    final glowColor = _rarityGlow(rarity);
+    final size   = MediaQuery.of(context).size;
+    final isWide = size.width > 560;
+    final cardW  = isWide ? 400.0 : size.width * 0.90;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
-        animation: Listenable.merge([_bgCtrl, _cardCtrl, _infoCtrl, _btnCtrl, _rotateCtrl, _pulseCtrl, _particleCtrl]),
-        builder: (context, _) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // ── 1. 全螢幕黑色遮罩 ──
-              Opacity(
-                opacity: _bgFade.value * 0.88,
-                child: Container(color: Colors.black),
-              ),
+        animation: Listenable.merge([
+          _bgCtrl, _cardCtrl, _infoCtrl, _btnCtrl,
+          _rotateCtrl, _pulseCtrl, _particleCtrl,
+        ]),
+        builder: (ctx, _) => Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. 黑色背景
+            Opacity(
+              opacity: (_bgFade.value * 0.90).clamp(0.0, 1.0),
+              child: Container(color: const Color(0xFF0B0B18)),
+            ),
 
-              // ── 2. 放射光芒（旋轉）──
-              Center(
+            // 2. 旋轉光芒
+            Center(
+              child: Opacity(
+                opacity: (_bgFade.value * 0.45).clamp(0.0, 1.0),
                 child: Transform.rotate(
-                  angle: _rotateCtrl.value * 2 * 3.14159,
+                  angle: _rotateCtrl.value * 2 * math.pi,
                   child: CustomPaint(
-                    size: Size(size.width * 1.5, size.width * 1.5),
-                    painter: _StarburstPainter(
-                      color: glowColor,
-                      opacity: _bgFade.value * 0.35,
-                    ),
+                    size: Size(size.width * 1.7, size.width * 1.7),
+                    painter: _StarburstPainter(color: _glow),
                   ),
                 ),
               ),
+            ),
 
-              // ── 3. 粒子特效 ──
-              ..._buildParticles(size, glowColor),
+            // 3. 粒子
+            ..._particles(size),
 
-              // ── 4. 主體置中，限寬 ──
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isWide ? 420 : size.width * 0.92),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(vertical: isWide ? 32 : 16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // ── 英雄卡片 ──
-                        SlideTransition(
-                          position: _cardSlide,
-                          child: ScaleTransition(
-                            scale: _cardScale,
-                            child: _buildHeroCard(cat, rarity, isDupe, isWide),
-                          ),
+            // 4. 主體（置中 + 限寬 + 可捲動）
+            Center(
+              child: SizedBox(
+                width: cardW,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(vertical: isWide ? 40 : 20),
+                  child: Column(
+                    children: [
+                      // 英雄卡片
+                      SlideTransition(
+                        position: _cardSlide,
+                        child: ScaleTransition(
+                          scale: _cardScale,
+                          child: _heroCard(cat, rarity, isDupe),
                         ),
+                      ),
+                      const SizedBox(height: 18),
 
-                        const SizedBox(height: 20),
-
-                        // ── 描述 ──
-                        SlideTransition(
+                      // 描述
+                      FadeTransition(
+                        opacity: _infoFade,
+                        child: SlideTransition(
                           position: _infoSlide,
-                          child: FadeTransition(
-                            opacity: _infoFade,
-                            child: _buildDescription(cat),
-                          ),
+                          child: _descBox(cat),
                         ),
+                      ),
+                      const SizedBox(height: 18),
 
-                        const SizedBox(height: 20),
-
-                        // ── 按鈕 ──
-                        FadeTransition(
-                          opacity: _btnFade,
-                          child: _buildButtons(isDupe),
-                        ),
-
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+                      // 按鈕
+                      FadeTransition(
+                        opacity: _btnFade,
+                        child: _buttons(isDupe),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
                   ),
                 ),
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // 英雄卡片
-  Widget _buildHeroCard(CatSpecies cat, String rarity, bool isDupe, bool isWide) {
-    final cardW = isWide ? 380.0 : double.infinity;
+  // 英雄卡片（貓咪滿版大圖 + 漸層文字）
+  Widget _heroCard(CatSpecies cat, String rarity, bool isDupe) {
+    final hasImg = cat.imageUrl != null && cat.imageUrl!.isNotEmpty;
     return Container(
-      width: cardW,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(
-            color: _rarityGlow(rarity).withOpacity(0.6),
-            blurRadius: 40,
-            spreadRadius: 4,
-          ),
+          BoxShadow(color: _glow.withValues(alpha: 0.55), blurRadius: 42, spreadRadius: 4),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
-            // 貓咪大圖（滿版底圖）
+            // 貓咪大圖（3:4）
             AspectRatio(
               aspectRatio: 3 / 4,
-              child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      cat.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: const Color(0xFF1a1a2e),
-                        child: Center(
-                          child: Text(cat.emoji ?? '🐱',
-                              style: const TextStyle(fontSize: 120)),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: const Color(0xFF1a1a2e),
-                      child: Center(
-                        child: Text(cat.emoji ?? '🐱',
-                            style: const TextStyle(fontSize: 120)),
-                      ),
-                    ),
+              child: hasImg
+                  ? Image.network(cat.imageUrl!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _EmojiBackground(emoji: cat.emoji, rarity: rarity))
+                  : _EmojiBackground(emoji: cat.emoji, rarity: rarity),
             ),
 
-            // 底部漸層遮罩
+            // 底部漸層
             Positioned(
               left: 0, right: 0, bottom: 0,
               child: Container(
-                height: 220,
+                height: 210,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [Color(0xF0000000), Color(0x00000000)],
+                    colors: [Color(0xF5000000), Color(0x00000000)],
                   ),
                 ),
               ),
             ),
 
-            // 頂部標籤區
+            // 頂部標籤
             Positioned(
-              top: 16, left: 16, right: 16,
+              top: 14, left: 14, right: 14,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (!isDupe)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: Colors.white.withOpacity(0.6), blurRadius: 12)],
-                      ),
-                      child: const Text(
-                        '✨ NEW!',
-                        style: TextStyle(
-                          color: Colors.deepPurple,
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
-                        ),
-                      ),
+                    _Badge(
+                      text: '✨ NEW!',
+                      bg: Colors.white,
+                      fg: Colors.deepPurple,
+                      glow: Colors.white,
                     )
                   else
                     const SizedBox(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: RarityHelper.bgColor(rarity),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _rarityGlow(rarity).withOpacity(0.5),
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      RarityHelper.label(rarity),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: RarityHelper.textColor(rarity),
-                      ),
-                    ),
+                  _Badge(
+                    text: RarityHelper.label(rarity),
+                    bg: RarityHelper.bgColor(rarity),
+                    fg: RarityHelper.textColor(rarity),
+                    glow: _glow,
                   ),
                 ],
               ),
             ),
 
-            // 底部文字（疊在漸層上）
+            // 底部名稱 + 星星
             Positioned(
-              left: 20, right: 20, bottom: 20,
+              left: 18, right: 18, bottom: 18,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    cat.jobTitle,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text(cat.jobTitle,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text(
-                    cat.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Nunito',
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 8)],
-                    ),
-                  ),
+                  Text(cat.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Nunito',
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                      )),
                   const SizedBox(height: 10),
-                  // 星等
                   Row(
                     children: List.generate(5, (i) {
-                      final starLevel = widget.result.newStarLevel ?? 1;
+                      final stars = widget.result.newStarLevel ?? 1;
                       return Icon(
-                        i < starLevel ? Icons.star_rounded : Icons.star_outline_rounded,
+                        i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
                         size: 22,
-                        color: i < starLevel ? AppColors.gold : Colors.white30,
+                        color: i < stars ? AppColors.gold : Colors.white30,
                       );
                     }),
                   ),
@@ -591,62 +539,60 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
     );
   }
 
-  Widget _buildDescription(CatSpecies cat) {
+  // 描述區塊
+  Widget _descBox(CatSpecies cat) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Text(
         cat.description,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 13,
-          height: 1.7,
-        ),
+        style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
       ),
     );
   }
 
-  Widget _buildButtons(bool isDupe) {
+  // 按鈕區
+  Widget _buttons(bool isDupe) {
+    final dupeText = widget.result.starUp
+        ? '✨ 重複！升至 ${widget.result.newStarLevel} 星  +${widget.result.coinsBonus} 🪙'
+        : '✨ 已達 5 星上限！換取 ${widget.result.coinsBonus} 🪙';
+
     return Column(
       children: [
-        if (isDupe)
+        if (isDupe) ...[
           ScaleTransition(
             scale: _pulse,
             child: Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFFFB800), Color(0xFFFF8C00)]),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFFFFB800), Color(0xFFFF7A00)]),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.gold.withOpacity(0.5),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
+                      color: AppColors.gold.withValues(alpha: 0.5),
+                      blurRadius: 22, spreadRadius: 2)
                 ],
               ),
-              child: Text(
-                widget.result.starUp
-                    ? '✨ 重複！升至 ${widget.result.newStarLevel} 星 +${widget.result.coinsBonus} 🪙'
-                    : '✨ 已達 5 星上限！換取 ${widget.result.coinsBonus} 🪙',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                ),
-              ),
+              child: Text(dupeText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  )),
             ),
           ),
+          const SizedBox(height: 12),
+        ],
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -655,221 +601,185 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
-            child: const Text(
-              '繼續抽！🎰',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w900,
-                fontSize: 17,
-              ),
-            ),
+            child: const Text('繼續抽！🎰',
+                style: TextStyle(
+                    fontFamily: 'Nunito', fontWeight: FontWeight.w900, fontSize: 17)),
           ),
         ),
       ],
     );
   }
 
-  // 粒子特效
-  List<Widget> _buildParticles(Size size, Color color) {
-    final particles = [
-      _ParticleConfig(emoji: '⭐', x: 0.15, y: 0.25, delay: 0.0, size: 20),
-      _ParticleConfig(emoji: '🪙', x: 0.80, y: 0.20, delay: 0.3, size: 18),
-      _ParticleConfig(emoji: '✨', x: 0.10, y: 0.60, delay: 0.6, size: 16),
-      _ParticleConfig(emoji: '⭐', x: 0.85, y: 0.55, delay: 0.1, size: 22),
-      _ParticleConfig(emoji: '🪙', x: 0.20, y: 0.80, delay: 0.5, size: 16),
-      _ParticleConfig(emoji: '</>', x: 0.75, y: 0.78, delay: 0.2, size: 14),
-      _ParticleConfig(emoji: '✨', x: 0.50, y: 0.10, delay: 0.4, size: 20),
+  // 粒子
+  List<Widget> _particles(Size sz) {
+    const ps = [
+      _ParticleCfg('⭐', 0.10, 0.20, 0.00, 20),
+      _ParticleCfg('🪙', 0.84, 0.18, 0.25, 18),
+      _ParticleCfg('✨', 0.06, 0.60, 0.50, 16),
+      _ParticleCfg('⭐', 0.88, 0.55, 0.10, 22),
+      _ParticleCfg('🪙', 0.16, 0.78, 0.40, 15),
+      _ParticleCfg('✨', 0.80, 0.75, 0.65, 16),
+      _ParticleCfg('⭐', 0.50, 0.06, 0.30, 20),
     ];
-
-    return particles.map((p) {
-      final t = (_particleCtrl.value + p.delay) % 1.0;
-      final floatY = size.height * p.y - (t * 60);
-      final opacity = (t < 0.5 ? t * 2 : (1 - t) * 2).clamp(0.0, 1.0);
+    return ps.map((p) {
+      final t   = (_particleCtrl.value + p.delay) % 1.0;
+      final fy  = sz.height * p.y - t * 70;
+      final op  = ((t < 0.5 ? t * 2 : (1 - t) * 2) * _bgFade.value).clamp(0.0, 1.0);
       return Positioned(
-        left: size.width * p.x,
-        top: floatY,
-        child: Opacity(
-          opacity: opacity * _bgFade.value,
-          child: Text(p.emoji,
-              style: TextStyle(fontSize: p.size.toDouble())),
-        ),
+        left: sz.width * p.x,
+        top: fy,
+        child: Opacity(opacity: op,
+            child: Text(p.e, style: TextStyle(fontSize: p.size.toDouble()))),
       );
     }).toList();
   }
-
-  Color _rarityGlow(String rarity) {
-    switch (rarity) {
-      case 'legendary': return const Color(0xFFFFD700);
-      case 'epic':      return const Color(0xFFB44FE8);
-      case 'rare':      return const Color(0xFF4F9EE8);
-      default:          return const Color(0xFF78C17A);
-    }
-  }
 }
 
-class _ParticleConfig {
-  final String emoji;
+// 粒子設定
+class _ParticleCfg {
+  final String e;
   final double x, y, delay;
   final int size;
-  const _ParticleConfig({
-    required this.emoji, required this.x, required this.y,
-    required this.delay, required this.size,
-  });
+  const _ParticleCfg(this.e, this.x, this.y, this.delay, this.size);
 }
 
-// 放射光芒 CustomPainter
+// 放射光芒 Painter
 class _StarburstPainter extends CustomPainter {
   final Color color;
-  final double opacity;
-  const _StarburstPainter({required this.color, required this.opacity});
+  const _StarburstPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final cx = size.width / 2;
+    final cy = size.height / 2;
     final maxR = size.width / 2;
-    const rays = 16;
-    final paint = Paint()..style = PaintingStyle.fill;
+    const rays = 18;
+    final p = Paint()..style = PaintingStyle.fill;
 
     for (int i = 0; i < rays; i++) {
-      final angle = (i / rays) * 2 * 3.14159;
-      final nextAngle = ((i + 0.4) / rays) * 2 * 3.14159;
+      final a1 = (i / rays) * 2 * math.pi;
+      final a2 = ((i + 0.38) / rays) * 2 * math.pi;
+      final r  = maxR * (i % 2 == 0 ? 1.15 : 0.65);
       final path = Path()
-        ..moveTo(center.dx, center.dy)
-        ..lineTo(
-          center.dx + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.cos(angle),
-          center.dy + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.sin(angle),
-        )
-        ..lineTo(
-          center.dx + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.cos(nextAngle),
-          center.dy + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.sin(nextAngle),
-        )
+        ..moveTo(cx, cy)
+        ..lineTo(cx + r * math.cos(a1), cy + r * math.sin(a1))
+        ..lineTo(cx + r * math.cos(a2), cy + r * math.sin(a2))
         ..close();
-
-      paint.color = color.withOpacity(opacity * (i % 2 == 0 ? 1 : 0.4));
-      canvas.drawPath(path, paint);
+      p.color = color.withValues(alpha: i % 2 == 0 ? 0.20 : 0.09);
+      canvas.drawPath(path, p);
     }
   }
 
   @override
-  bool shouldRepaint(_StarburstPainter old) =>
-      old.opacity != opacity || old.color != color;
+  bool shouldRepaint(_StarburstPainter old) => old.color != color;
 }
 
+// 標籤小元件
+class _Badge extends StatelessWidget {
+  final String text;
+  final Color bg, fg, glow;
+  const _Badge({required this.text, required this.bg, required this.fg, required this.glow});
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: glow.withValues(alpha: 0.5), blurRadius: 12)],
+      ),
+      child: Text(text,
+          style: TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              color: fg)),
+    );
+  }
+}
 
-// ──────────────────────────────────────────────
+// 沒有圖片時用漸層 + emoji
+class _EmojiBackground extends StatelessWidget {
+  final String? emoji;
+  final String rarity;
+  const _EmojiBackground({this.emoji, required this.rarity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: RarityHelper.cardGradient(rarity),
+        ),
+      ),
+      child: Center(
+          child: Text(emoji ?? '🐱', style: const TextStyle(fontSize: 100))),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // 子元件
-// ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
 
 class _ResourceChip extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final Color color;
-  final Color bgColor;
-
-  const _ResourceChip({
-    required this.emoji,
-    required this.label,
-    required this.color,
-    required this.bgColor,
-  });
+  final String emoji, label;
+  final Color color, bgColor;
+  const _ResourceChip(
+      {required this.emoji, required this.label, required this.color, required this.bgColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppRadius.badge),
-      ),
-      child: Text(
-        '$emoji $label',
-        style: TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w700, color: color),
-      ),
+          color: bgColor, borderRadius: BorderRadius.circular(AppRadius.badge)),
+      child: Text('$emoji $label',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
 
 class _GachaButton extends StatelessWidget {
-  final String label;
-  final String subtitle;
+  final String label, subtitle;
   final Color color;
-  final bool enabled;
-  final bool isLoading;
+  final bool enabled, isLoading;
   final VoidCallback onPressed;
-
   const _GachaButton({
-    required this.label,
-    required this.subtitle,
-    required this.color,
-    required this.enabled,
-    required this.isLoading,
-    required this.onPressed,
+    required this.label, required this.subtitle, required this.color,
+    required this.enabled, required this.isLoading, required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: enabled
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.forbidden,
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
       child: GestureDetector(
         onTap: enabled ? onPressed : null,
         child: Container(
           width: 180,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
-            color: enabled ? color : color.withOpacity(0.4),
+            color: enabled ? color : color.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(AppRadius.button),
             boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
+                ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]
                 : [],
           ),
           child: isLoading
-              ? const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                )
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+              ? const Center(child: SizedBox(width: 24, height: 24,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)))
+              : Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(label, style: const TextStyle(
+                      color: Colors.white, fontFamily: 'Nunito', fontWeight: FontWeight.w800, fontSize: 15)),
+                  Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                ]),
         ),
       ),
     );
@@ -879,51 +789,36 @@ class _GachaButton extends StatelessWidget {
 class _RarityBadge extends StatelessWidget {
   final String rarity;
   final bool large;
-
   const _RarityBadge({required this.rarity, this.large = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: large ? 14 : 8,
-        vertical: large ? 5 : 2,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: large ? 14 : 8, vertical: large ? 5 : 2),
       decoration: BoxDecoration(
-        color: RarityHelper.bgColor(rarity),
-        borderRadius: BorderRadius.circular(AppRadius.badge),
-      ),
-      child: Text(
-        RarityHelper.label(rarity),
-        style: TextStyle(
-          fontSize: large ? 13 : 10,
-          fontWeight: FontWeight.w700,
-          color: RarityHelper.textColor(rarity),
-        ),
-      ),
+          color: RarityHelper.bgColor(rarity),
+          borderRadius: BorderRadius.circular(AppRadius.badge)),
+      child: Text(RarityHelper.label(rarity),
+          style: TextStyle(
+              fontSize: large ? 13 : 10,
+              fontWeight: FontWeight.w700,
+              color: RarityHelper.textColor(rarity))),
     );
   }
 }
 
 class _OddsRow extends StatelessWidget {
-  final String rarity;
-  final String pct;
-
+  final String rarity, pct;
   const _OddsRow({required this.rarity, required this.pct});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _RarityBadge(rarity: rarity),
-        const SizedBox(width: 8),
-        Text(pct,
-            style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-                color: AppColors.text)),
-      ],
-    );
+    return Row(children: [
+      _RarityBadge(rarity: rarity , large: true),
+      const SizedBox(width: 8),
+      Text(pct,
+          style: const TextStyle(
+              fontFamily: 'Nunito', fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.text)),
+    ]);
   }
 }
