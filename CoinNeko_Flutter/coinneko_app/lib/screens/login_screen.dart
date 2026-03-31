@@ -206,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 4),
         const Text(
-          '記帳養貓，金幣抽卡',
+          '記帳的同時 順便抽可愛傳奇貓咪圖鑑',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.textSub,
@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen>
             const SizedBox(height: 14),
             _AppTextField(
               controller: _regEmailCtrl,
-              label: 'Email（選填）',
+              label: 'Email（可以不用填）',
               hint: 'example@email.com',
               prefixIcon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
@@ -340,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 8),
             const Text(
-              '🎟️ 註冊即送 1 張扭蛋券',
+              '🎟️ 註冊即送 10 張扭蛋券',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -362,11 +362,11 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             _HintBadge(emoji: '🪙', text: '記帳 +10 金幣'),
             SizedBox(width: 8),
-            _HintBadge(emoji: '🎟️', text: '每日首筆 +扭蛋券'),
+            _HintBadge(emoji: '🎟️', text: '每日首筆記帳 +1 扭蛋券'),
           ],
         ),
         SizedBox(height: 8),
-        _HintBadge(emoji: '🐱', text: '收集稀有貓咪圖鑑'),
+        _HintBadge(emoji: '🐱', text: '一起收集可愛貓咪圖鑑吧！'),
       ],
     );
   }
