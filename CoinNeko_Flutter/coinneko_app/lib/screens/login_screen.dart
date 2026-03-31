@@ -51,6 +51,64 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppColors.card,
+        title: const Row(
+          children: [
+            Text('😿', style: TextStyle(fontSize: 28)),
+            SizedBox(width: 10),
+            Text(
+              '登入失敗',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: AppColors.textSub,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.purple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                '再試一次',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ],
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
+  }
+
   Future<void> _doLogin() async {
     if (!_loginFormKey.currentState!.validate()) return;
     setState(() => _errorMsg = null);
@@ -61,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen>
       password: _loginPasswordCtrl.text,
     );
     if (error != null && mounted) {
-      setState(() => _errorMsg = error);
+      _showErrorDialog(error);
     }
   }
 
@@ -77,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
       password2: _regPassword2Ctrl.text,
     );
     if (error != null && mounted) {
-      setState(() => _errorMsg = error);
+      _showErrorDialog(error);
     }
   }
 
@@ -128,25 +186,6 @@ class _LoginScreenState extends State<LoginScreen>
                           ],
                         ),
                       ),
-
-                      // Error banner
-                      if (_errorMsg != null)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                          decoration: BoxDecoration(
-                            color: AppColors.redLight,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _errorMsg!,
-                            style: const TextStyle(
-                                color: AppColors.red,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
 
                       // Tab content
                       SizedBox(

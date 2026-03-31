@@ -335,10 +335,8 @@ class _GachaResultDialogState extends State<_GachaResultDialog>
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                   child: Column(
                     children: [
-                      // ── 貓咪圖片 ──
+                      // ── 貓咪圖片（大圖，自適應螢幕）──
                       Container(
-                        width: 130,
-                        height: 130,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(20),
@@ -351,12 +349,39 @@ class _GachaResultDialogState extends State<_GachaResultDialog>
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: CatAvatar(
-                            imageUrl: cat.imageUrl,
-                            emoji: cat.emoji,
-                            size: 100,
-                          ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // 根據螢幕寬度自動決定圖片大小，手機/電腦都好看
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            final imgSize = (screenWidth < 400
+                                    ? screenWidth * 0.55
+                                    : 220.0)
+                                .clamp(160.0, 260.0);
+                            return SizedBox(
+                              width: imgSize,
+                              height: imgSize,
+                              child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.network(
+                                        cat.imageUrl!,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => Center(
+                                          child: Text(
+                                            cat.emoji ?? '🐱',
+                                            style: TextStyle(fontSize: imgSize * 0.55),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        cat.emoji ?? '🐱',
+                                        style: TextStyle(fontSize: imgSize * 0.55),
+                                      ),
+                                    ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 20),
