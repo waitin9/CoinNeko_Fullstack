@@ -1,4 +1,5 @@
 // frontend/lib/screens/gacha_screen.dart
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -83,11 +84,13 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   void _showResultModal(GachaPullResult result) {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (ctx) => _GachaResultDialog(result: result),
+      barrierDismissible: false,
+      barrierLabel: 'gacha_result',
+      barrierColor: Colors.transparent,
+      transitionDuration: Duration.zero,
+      pageBuilder: (ctx, _, __) => _GachaResultOverlay(result: result),
     );
   }
 
@@ -250,42 +253,94 @@ class _GachaScreenState extends State<GachaScreen>
   }
 }
 
-// ──────────────────────────────────────────────
-// ★ 抽卡結果 Modal
-// ──────────────────────────────────────────────
-class _GachaResultDialog extends StatefulWidget {
-  final GachaPullResult result;
 
-  const _GachaResultDialog({required this.result});
+// ──────────────────────────────────────────────
+// ★ 抽卡結果 全螢幕沉浸式覆蓋
+// ──────────────────────────────────────────────
+class _GachaResultOverlay extends StatefulWidget {
+  final GachaPullResult result;
+  const _GachaResultOverlay({required this.result});
 
   @override
-  State<_GachaResultDialog> createState() => _GachaResultDialogState();
+  State<_GachaResultOverlay> createState() => _GachaResultOverlayState();
 }
 
-class _GachaResultDialogState extends State<_GachaResultDialog>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scaleAnim;
-  late final Animation<double> _fadeAnim;
+class _GachaResultOverlayState extends State<_GachaResultOverlay>
+    with TickerProviderStateMixin {
+  // 控制器
+  late final AnimationController _bgCtrl;       // 背景暗化
+  late final AnimationController _cardCtrl;     // 卡片彈入
+  late final AnimationController _infoCtrl;     // 資訊淡入
+  late final AnimationController _btnCtrl;      // 按鈕浮現
+  late final AnimationController _rotateCtrl;   // 光芒旋轉
+  late final AnimationController _pulseCtrl;    // 重複按鈕呼吸
+  late final AnimationController _particleCtrl; // 粒子
+
+  // 動畫
+  late final Animation<double> _bgFade;
+  late final Animation<double> _cardScale;
+  late final Animation<Offset> _cardSlide;
+  late final Animation<double> _infoFade;
+  late final Animation<Offset> _infoSlide;
+  late final Animation<double> _btnFade;
+  late final Animation<double> _pulse;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
+
+    _bgCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _cardCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _infoCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _btnCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _rotateCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+    _particleCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+
+    _bgFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _bgCtrl, curve: Curves.easeOut),
     );
-    _scaleAnim = CurvedAnimation(
-      parent: _ctrl,
+    _cardScale = CurvedAnimation(
+      parent: _cardCtrl,
       curve: const Cubic(0.175, 0.885, 0.32, 1.275),
     );
-    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _ctrl.forward();
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+      CurvedAnimation(parent: _cardCtrl, curve: Curves.easeOut),
+    );
+    _infoFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut),
+    );
+    _infoSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+      CurvedAnimation(parent: _infoCtrl, curve: Curves.easeOut),
+    );
+    _btnFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _btnCtrl, curve: Curves.easeOut),
+    );
+    _pulse = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    _runSequence();
+  }
+
+  Future<void> _runSequence() async {
+    await _bgCtrl.forward();
+    await _cardCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 200));
+    await _infoCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 100));
+    await _btnCtrl.forward();
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _bgCtrl.dispose();
+    _cardCtrl.dispose();
+    _infoCtrl.dispose();
+    _btnCtrl.dispose();
+    _rotateCtrl.dispose();
+    _pulseCtrl.dispose();
+    _particleCtrl.dispose();
     super.dispose();
   }
 
@@ -294,202 +349,418 @@ class _GachaResultDialogState extends State<_GachaResultDialog>
     final cat = widget.result.cat;
     final rarity = cat.rarity;
     final isDupe = widget.result.isDuplicate;
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width > 600;
 
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: ScaleTransition(
-          scale: _scaleAnim,
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 400),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: RarityHelper.cardGradient(rarity),
+    // 稀有度對應光芒顏色
+    final glowColor = _rarityGlow(rarity);
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: AnimatedBuilder(
+        animation: Listenable.merge([_bgCtrl, _cardCtrl, _infoCtrl, _btnCtrl, _rotateCtrl, _pulseCtrl, _particleCtrl]),
+        builder: (context, _) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // ── 1. 全螢幕黑色遮罩 ──
+              Opacity(
+                opacity: _bgFade.value * 0.88,
+                child: Container(color: Colors.black),
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: AppShadows.elevated,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── 頂部稀有度顏色條 ──
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: RarityHelper.textColor(rarity).withOpacity(0.15),
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(24)),
-                  ),
-                  child: Center(
-                    child: _RarityBadge(rarity: rarity, large: true),
+
+              // ── 2. 放射光芒（旋轉）──
+              Center(
+                child: Transform.rotate(
+                  angle: _rotateCtrl.value * 2 * 3.14159,
+                  child: CustomPaint(
+                    size: Size(size.width * 1.5, size.width * 1.5),
+                    painter: _StarburstPainter(
+                      color: glowColor,
+                      opacity: _bgFade.value * 0.35,
+                    ),
                   ),
                 ),
+              ),
 
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                  child: Column(
-                    children: [
-                      // ── 貓咪圖片（大圖，自適應螢幕）──
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: RarityHelper.textColor(rarity)
-                                  .withOpacity(0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            // 根據螢幕寬度自動決定圖片大小，手機/電腦都好看
-                            final screenWidth = MediaQuery.of(context).size.width;
-                            final imgSize = (screenWidth < 400
-                                    ? screenWidth * 0.55
-                                    : 220.0)
-                                .clamp(160.0, 260.0);
-                            return SizedBox(
-                              width: imgSize,
-                              height: imgSize,
-                              child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.network(
-                                        cat.imageUrl!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Center(
-                                          child: Text(
-                                            cat.emoji ?? '🐱',
-                                            style: TextStyle(fontSize: imgSize * 0.55),
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        cat.emoji ?? '🐱',
-                                        style: TextStyle(fontSize: imgSize * 0.55),
-                                      ),
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+              // ── 3. 粒子特效 ──
+              ..._buildParticles(size, glowColor),
 
-                      // ── 貓咪名字 ──
-                      Text(
-                        cat.name,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.text,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-
-                      // ── 職稱 ──
-                      Text(
-                        cat.jobTitle,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSub,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── 分隔線 ──
-                      Container(
-                        height: 1,
-                        color: Colors.black.withOpacity(0.06),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── 描述 ──
-                      Text(
-                        cat.description,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSub,
-                          height: 1.6,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── 結果訊息（新貓 or 重複）──
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isDupe
-                              ? AppColors.goldLight
-                              : AppColors.greenLight,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isDupe
-                              ? (widget.result.starUp
-                                  ? '✨ 重複！升至 ${widget.result.newStarLevel} 星 +${widget.result.coinsBonus} 🪙'
-                                  : '✨ 已達 5 星上限！換取 ${widget.result.coinsBonus} 🪙')
-                              : '🎉 新貓咪加入圖鑑！',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: isDupe ? AppColors.gold : AppColors.green,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
+              // ── 4. 主體置中，限寬 ──
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isWide ? 420 : size.width * 0.92),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(vertical: isWide ? 32 : 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // ── 英雄卡片 ──
+                        SlideTransition(
+                          position: _cardSlide,
+                          child: ScaleTransition(
+                            scale: _cardScale,
+                            child: _buildHeroCard(cat, rarity, isDupe, isWide),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
 
-                      // ── 關閉按鈕 ──
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: RarityHelper.textColor(rarity),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '繼續抽！',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
+                        const SizedBox(height: 20),
+
+                        // ── 描述 ──
+                        SlideTransition(
+                          position: _infoSlide,
+                          child: FadeTransition(
+                            opacity: _infoFade,
+                            child: _buildDescription(cat),
                           ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 20),
+
+                        // ── 按鈕 ──
+                        FadeTransition(
+                          opacity: _btnFade,
+                          child: _buildButtons(isDupe),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // 英雄卡片
+  Widget _buildHeroCard(CatSpecies cat, String rarity, bool isDupe, bool isWide) {
+    final cardW = isWide ? 380.0 : double.infinity;
+    return Container(
+      width: cardW,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: _rarityGlow(rarity).withOpacity(0.6),
+            blurRadius: 40,
+            spreadRadius: 4,
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          children: [
+            // 貓咪大圖（滿版底圖）
+            AspectRatio(
+              aspectRatio: 3 / 4,
+              child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
+                  ? Image.network(
+                      cat.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color(0xFF1a1a2e),
+                        child: Center(
+                          child: Text(cat.emoji ?? '🐱',
+                              style: const TextStyle(fontSize: 120)),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: const Color(0xFF1a1a2e),
+                      child: Center(
+                        child: Text(cat.emoji ?? '🐱',
+                            style: const TextStyle(fontSize: 120)),
+                      ),
+                    ),
+            ),
+
+            // 底部漸層遮罩
+            Positioned(
+              left: 0, right: 0, bottom: 0,
+              child: Container(
+                height: 220,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xF0000000), Color(0x00000000)],
+                  ),
+                ),
+              ),
+            ),
+
+            // 頂部標籤區
+            Positioned(
+              top: 16, left: 16, right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (!isDupe)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.white.withOpacity(0.6), blurRadius: 12)],
+                      ),
+                      child: const Text(
+                        '✨ NEW!',
+                        style: TextStyle(
+                          color: Colors.deepPurple,
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: RarityHelper.bgColor(rarity),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _rarityGlow(rarity).withOpacity(0.5),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      RarityHelper.label(rarity),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: RarityHelper.textColor(rarity),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 底部文字（疊在漸層上）
+            Positioned(
+              left: 20, right: 20, bottom: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    cat.jobTitle,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    cat.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Nunito',
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // 星等
+                  Row(
+                    children: List.generate(5, (i) {
+                      final starLevel = widget.result.newStarLevel ?? 1;
+                      return Icon(
+                        i < starLevel ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 22,
+                        color: i < starLevel ? AppColors.gold : Colors.white30,
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _buildDescription(CatSpecies cat) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Text(
+        cat.description,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 13,
+          height: 1.7,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtons(bool isDupe) {
+    return Column(
+      children: [
+        if (isDupe)
+          ScaleTransition(
+            scale: _pulse,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFFFB800), Color(0xFFFF8C00)]),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withOpacity(0.5),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Text(
+                widget.result.starUp
+                    ? '✨ 重複！升至 ${widget.result.newStarLevel} 星 +${widget.result.coinsBonus} 🪙'
+                    : '✨ 已達 5 星上限！換取 ${widget.result.coinsBonus} 🪙',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              '繼續抽！🎰',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w900,
+                fontSize: 17,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 粒子特效
+  List<Widget> _buildParticles(Size size, Color color) {
+    final particles = [
+      _ParticleConfig(emoji: '⭐', x: 0.15, y: 0.25, delay: 0.0, size: 20),
+      _ParticleConfig(emoji: '🪙', x: 0.80, y: 0.20, delay: 0.3, size: 18),
+      _ParticleConfig(emoji: '✨', x: 0.10, y: 0.60, delay: 0.6, size: 16),
+      _ParticleConfig(emoji: '⭐', x: 0.85, y: 0.55, delay: 0.1, size: 22),
+      _ParticleConfig(emoji: '🪙', x: 0.20, y: 0.80, delay: 0.5, size: 16),
+      _ParticleConfig(emoji: '</>', x: 0.75, y: 0.78, delay: 0.2, size: 14),
+      _ParticleConfig(emoji: '✨', x: 0.50, y: 0.10, delay: 0.4, size: 20),
+    ];
+
+    return particles.map((p) {
+      final t = (_particleCtrl.value + p.delay) % 1.0;
+      final floatY = size.height * p.y - (t * 60);
+      final opacity = (t < 0.5 ? t * 2 : (1 - t) * 2).clamp(0.0, 1.0);
+      return Positioned(
+        left: size.width * p.x,
+        top: floatY,
+        child: Opacity(
+          opacity: opacity * _bgFade.value,
+          child: Text(p.emoji,
+              style: TextStyle(fontSize: p.size.toDouble())),
+        ),
+      );
+    }).toList();
+  }
+
+  Color _rarityGlow(String rarity) {
+    switch (rarity) {
+      case 'legendary': return const Color(0xFFFFD700);
+      case 'epic':      return const Color(0xFFB44FE8);
+      case 'rare':      return const Color(0xFF4F9EE8);
+      default:          return const Color(0xFF78C17A);
+    }
+  }
 }
+
+class _ParticleConfig {
+  final String emoji;
+  final double x, y, delay;
+  final int size;
+  const _ParticleConfig({
+    required this.emoji, required this.x, required this.y,
+    required this.delay, required this.size,
+  });
+}
+
+// 放射光芒 CustomPainter
+class _StarburstPainter extends CustomPainter {
+  final Color color;
+  final double opacity;
+  const _StarburstPainter({required this.color, required this.opacity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = size.width / 2;
+    const rays = 16;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < rays; i++) {
+      final angle = (i / rays) * 2 * 3.14159;
+      final nextAngle = ((i + 0.4) / rays) * 2 * 3.14159;
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.cos(angle),
+          center.dy + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.sin(angle),
+        )
+        ..lineTo(
+          center.dx + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.cos(nextAngle),
+          center.dy + maxR * 1.2 * (i % 2 == 0 ? 1 : 0.6) * math.sin(nextAngle),
+        )
+        ..close();
+
+      paint.color = color.withOpacity(opacity * (i % 2 == 0 ? 1 : 0.4));
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StarburstPainter old) =>
+      old.opacity != opacity || old.color != color;
+}
+
+
 
 // ──────────────────────────────────────────────
 // 子元件

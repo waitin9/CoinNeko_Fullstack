@@ -1,4 +1,5 @@
 // frontend/lib/screens/collection_screen.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -140,6 +141,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 }
 
+// ──────────────────────────────────────────────
+// ★ 圖鑑卡片
+// ──────────────────────────────────────────────
 class _CatCard extends StatelessWidget {
   final CatSpecies species;
   final UserCat? userCat;
@@ -155,173 +159,211 @@ class _CatCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black60,
       builder: (ctx) => _CatDetailDialog(species: species, userCat: userCat!),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 未獲得：黑白剪影 + 半透明，心癢癢效果
-    if (isLocked) {
-      return Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(AppRadius.catCard),
-          boxShadow: AppShadows.card,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.catCard),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 黑白去色貓咪圖（若有圖）
-              if (species.imageUrl != null && species.imageUrl!.isNotEmpty)
-                Opacity(
-                  opacity: 0.18,
-                  child: ColorFiltered(
-                    colorFilter: const ColorFilter.matrix([
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0,      0,      0,      1, 0,
-                    ]),
-                    child: Image.network(
-                      species.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox(),
-                    ),
-                  ),
-                )
-              else
-                Center(
-                  child: Opacity(
-                    opacity: 0.15,
-                    child: Text(
-                      species.emoji ?? '🐱',
-                      style: const TextStyle(fontSize: 64),
-                    ),
-                  ),
-                ),
-              // 問號疊在上面
-              const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '?',
-                      style: TextStyle(
-                        fontSize: 52,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFBDBDBD),
-                      ),
-                    ),
-                    Text(
-                      '尚未獲得',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFBDBDBD),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // 已獲得：可點擊，跳出詳細視窗
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
+      cursor: isLocked ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => _showDetailModal(context),
+        onTap: isLocked ? null : () => _showDetailModal(context),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: RarityHelper.cardGradient(species.rarity),
-            ),
             borderRadius: BorderRadius.circular(AppRadius.catCard),
             boxShadow: AppShadows.card,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.catCard),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  CatAvatar(
-                    imageUrl: species.imageUrl,
-                    emoji: species.emoji,
-                    size: 72,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    species.name,
-                    style: AppTextStyles.catName,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    species.jobTitle,
-                    style: const TextStyle(
-                        fontSize: 10, color: AppColors.textSub),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: RarityHelper.bgColor(species.rarity),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      RarityHelper.label(species.rarity),
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: RarityHelper.textColor(species.rarity)),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (userCat != null)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (i) {
-                        return Icon(
-                          i < userCat!.starLevel ? Icons.star : Icons.star_border,
-                          size: 14,
-                          color: i < userCat!.starLevel
-                              ? AppColors.gold
-                              : AppColors.border,
-                        );
-                      }),
-                    ),
-                ],
+            child: isLocked ? _buildLocked() : _buildUnlocked(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 已解鎖：大圖滿版 + 漸層文字 ──
+  Widget _buildUnlocked() {
+    final hasImage = species.imageUrl != null && species.imageUrl!.isNotEmpty;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 底層：貓咪大圖
+        hasImage
+            ? Image.network(
+                species.imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _EmojiBackground(emoji: species.emoji, rarity: species.rarity),
+              )
+            : _EmojiBackground(emoji: species.emoji, rarity: species.rarity),
+
+        // 中層：底部漸層遮罩
+        const Positioned(
+          left: 0, right: 0, bottom: 0,
+          child: SizedBox(
+            height: 90,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0xCC000000), Color(0x00000000)],
+                ),
               ),
             ),
           ),
         ),
+
+        // 頂左：稀有度標籤
+        Positioned(
+          top: 8, left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: RarityHelper.bgColor(species.rarity),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+            ),
+            child: Text(
+              RarityHelper.label(species.rarity),
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                color: RarityHelper.textColor(species.rarity),
+              ),
+            ),
+          ),
+        ),
+
+        // 底層文字：名稱 + 星星
+        Positioned(
+          left: 8, right: 8, bottom: 8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                species.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                ),
+              ),
+              const SizedBox(height: 3),
+              if (userCat != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (i) => Icon(
+                    i < userCat!.starLevel ? Icons.star_rounded : Icons.star_outline_rounded,
+                    size: 12,
+                    color: i < userCat!.starLevel ? AppColors.gold : Colors.white38,
+                  )),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── 未解鎖：灰階 + 高斯模糊 + 暗化 + 問號 ──
+  Widget _buildLocked() {
+    final hasImage = species.imageUrl != null && species.imageUrl!.isNotEmpty;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 底層：黑白去色
+        ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0,      0,      0,      1, 0,
+          ]),
+          child: hasImage
+              ? Image.network(
+                  species.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(color: const Color(0xFF333333)),
+                )
+              : _EmojiBackground(emoji: species.emoji, rarity: 'common'),
+        ),
+
+        // 高斯模糊疊在上
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
+            child: const SizedBox(),
+          ),
+        ),
+
+        // 暗化遮罩
+        Container(color: Colors.black.withOpacity(0.40)),
+
+        // 問號 + 文字
+        const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '?',
+                style: TextStyle(
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white54,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                '尚未獲得',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.white38,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// 沒有圖片時的彩色 emoji 背景
+class _EmojiBackground extends StatelessWidget {
+  final String? emoji;
+  final String rarity;
+  const _EmojiBackground({this.emoji, required this.rarity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: RarityHelper.cardGradient(rarity),
+        ),
+      ),
+      child: Center(
+        child: Text(emoji ?? '🐱', style: const TextStyle(fontSize: 64)),
       ),
     );
   }
 }
 
 // ──────────────────────────────────────────────
-// ★ 圖鑑詳細資訊 Modal
+// ★ 圖鑑詳細資訊 Modal（大圖版）
 // ──────────────────────────────────────────────
 class _CatDetailDialog extends StatefulWidget {
   final CatSpecies species;
@@ -365,205 +407,202 @@ class _CatDetailDialogState extends State<_CatDetailDialog>
     final s = widget.species;
     final uc = widget.userCat;
     final rarity = s.rarity;
+    final hasImage = s.imageUrl != null && s.imageUrl!.isNotEmpty;
+    final glowColor = _rarityGlow(rarity);
 
     return FadeTransition(
       opacity: _fadeAnim,
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
         child: ScaleTransition(
           scale: _scaleAnim,
-          child: Container(
-            width: double.infinity,
+          child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 380),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: RarityHelper.cardGradient(rarity),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C1C2E),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: glowColor.withOpacity(0.4),
+                    blurRadius: 32,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: AppShadows.elevated,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 頂部稀有度色條
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: RarityHelper.textColor(rarity).withOpacity(0.15),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: RarityHelper.bgColor(rarity),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        RarityHelper.label(rarity),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: RarityHelper.textColor(rarity),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── 英雄圖片區（滿版，無內距）──
+                    Stack(
+                      children: [
+                        // 大圖
+                        AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: hasImage
+                              ? Image.network(
+                                  s.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _EmojiBackground(emoji: s.emoji, rarity: rarity),
+                                )
+                              : _EmojiBackground(emoji: s.emoji, rarity: rarity),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
 
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-                  child: Column(
-                    children: [
-                      // 貓咪大圖
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: RarityHelper.textColor(rarity)
-                                  .withOpacity(0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
+                        // 底部漸層遮罩
+                        Positioned(
+                          left: 0, right: 0, bottom: 0,
+                          child: Container(
+                            height: 120,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [Color(0xFF1C1C2E), Color(0x001C1C2E)],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 右上：稀有度標籤
+                        Positioned(
+                          top: 12, right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: RarityHelper.bgColor(rarity),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(color: glowColor.withOpacity(0.5), blurRadius: 8),
+                              ],
+                            ),
+                            child: Text(
+                              RarityHelper.label(rarity),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: RarityHelper.textColor(rarity),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 圖片底部：名稱疊在漸層上
+                        Positioned(
+                          left: 16, right: 16, bottom: 12,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.jobTitle,
+                                style: const TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                s.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontFamily: 'Nunito',
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ── 資訊區（圖片下方）──
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                      child: Column(
+                        children: [
+                          // 星等
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(5, (i) => Icon(
+                              i < uc.starLevel ? Icons.star_rounded : Icons.star_outline_rounded,
+                              size: 24,
+                              color: i < uc.starLevel ? AppColors.gold : Colors.white24,
+                            )),
+                          ),
+
+                          if (s.description.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.06),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                              ),
+                              child: Text(
+                                s.description,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                  height: 1.65,
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final screenWidth =
-                                MediaQuery.of(context).size.width;
-                            final imgSize =
-                                (screenWidth < 400 ? screenWidth * 0.5 : 180.0)
-                                    .clamp(140.0, 200.0);
-                            return SizedBox(
-                              width: imgSize,
-                              height: imgSize,
-                              child: s.imageUrl != null &&
-                                      s.imageUrl!.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.network(
-                                        s.imageUrl!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Center(
-                                          child: Text(
-                                            s.emoji ?? '🐱',
-                                            style: TextStyle(
-                                                fontSize: imgSize * 0.55),
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        s.emoji ?? '🐱',
-                                        style: TextStyle(
-                                            fontSize: imgSize * 0.55),
-                                      ),
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
 
-                      // 名字
-                      Text(
-                        s.name,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.text,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
+                          const SizedBox(height: 16),
 
-                      // 職稱
-                      Text(
-                        s.jobTitle,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSub,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 星等
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(5, (i) {
-                          return Icon(
-                            i < uc.starLevel ? Icons.star : Icons.star_border,
-                            size: 22,
-                            color: i < uc.starLevel
-                                ? AppColors.gold
-                                : AppColors.border,
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 分隔線
-                      Container(
-                          height: 1,
-                          color: Colors.black.withOpacity(0.06)),
-                      const SizedBox(height: 14),
-
-                      // 描述
-                      if (s.description.isNotEmpty)
-                        Text(
-                          s.description,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSub,
-                            height: 1.6,
-                          ),
-                        ),
-                      const SizedBox(height: 18),
-
-                      // 關閉按鈕
-                      SizedBox(
-                        width: double.infinity,
-                        height: 46,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                RarityHelper.textColor(rarity),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          // 關閉按鈕
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: glowColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                '關閉',
+                                style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
-                          child: const Text(
-                            '關閉',
-                            style: TextStyle(
-                              fontFamily: 'Nunito',
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Color _rarityGlow(String rarity) {
+    switch (rarity) {
+      case 'legendary': return const Color(0xFFFFD700);
+      case 'epic':      return const Color(0xFFB44FE8);
+      case 'rare':      return const Color(0xFF4F9EE8);
+      default:          return const Color(0xFF78C17A);
+    }
   }
 }
