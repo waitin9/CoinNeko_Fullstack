@@ -31,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _regPassVisible = false;
   bool _regPass2Visible = false;
   String? _errorMsg;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -111,31 +112,59 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _doLogin() async {
     if (!_loginFormKey.currentState!.validate()) return;
-    setState(() => _errorMsg = null);
+    if (_isSubmitting) return;
 
-    final auth = context.read<AuthService>();
-    final error = await auth.login(
-      username: _loginUsernameCtrl.text.trim(),
-      password: _loginPasswordCtrl.text,
-    );
-    if (error != null && mounted) {
-      _showErrorDialog('帳號或密碼錯誤，請重新輸入！');
+    setState(() {
+      _errorMsg = null;
+      _isSubmitting = true;
+    });
+
+    try {
+      final auth = context.read<AuthService>();
+      final error = await auth.login(
+        username: _loginUsernameCtrl.text.trim(),
+        password: _loginPasswordCtrl.text,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        _showErrorDialog('帳號或密碼錯誤，請重新輸入！');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   Future<void> _doRegister() async {
     if (!_registerFormKey.currentState!.validate()) return;
-    setState(() => _errorMsg = null);
+    if (_isSubmitting) return;
 
-    final auth = context.read<AuthService>();
-    final error = await auth.register(
-      username: _regUsernameCtrl.text.trim(),
-      email: _regEmailCtrl.text.trim(),
-      password: _regPasswordCtrl.text,
-      password2: _regPassword2Ctrl.text,
-    );
-    if (error != null && mounted) {
-      _showErrorDialog(error);
+    setState(() {
+      _errorMsg = null;
+      _isSubmitting = true;
+    });
+
+    try {
+      final auth = context.read<AuthService>();
+      final error = await auth.register(
+        username: _regUsernameCtrl.text.trim(),
+        email: _regEmailCtrl.text.trim(),
+        password: _regPasswordCtrl.text,
+        password2: _regPassword2Ctrl.text,
+      );
+
+      if (!mounted) return;
+
+      if (error != null) {
+        _showErrorDialog(error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -292,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen>
             const Spacer(),
             _AppButton(
               label: '登入',
-              isLoading: auth.isLoading,
+              isLoading: _isSubmitting,
               onPressed: _doLogin,
             ),
           ],
@@ -374,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen>
             const SizedBox(height: 20),
             _AppButton(
               label: '建立帳號',
-              isLoading: auth.isLoading,
+              isLoading: _isSubmitting,
               onPressed: _doRegister,
             ),
             const SizedBox(height: 8),

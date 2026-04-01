@@ -96,41 +96,59 @@ class _CollectionScreenState extends State<CollectionScreen> {
     final provider = context.watch<CollectionProvider>();
 
     if (!provider.initialized) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(color: AppColors.purple),
-            const SizedBox(height: 12),
-            Text('載入圖鑑中...',
-                style: TextStyle(color: AppColors.textSub, fontSize: 13)),
-          ],
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text('貓咪圖鑑', style: AppTextStyles.heading2),
+          leading: const BackButton(color: AppColors.text),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColors.purple),
+              const SizedBox(height: 12),
+              Text('載入圖鑑中...',
+                  style: TextStyle(color: AppColors.textSub, fontSize: 13)),
+            ],
+          ),
         ),
       );
     }
 
     if (provider.error != null && provider.species.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('😿', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            Text('載入失敗，請下拉重試',
-                style: TextStyle(color: AppColors.textSub, fontSize: 14)),
-            const SizedBox(height: 8),
-            Text(provider.error!,
-                style: const TextStyle(color: AppColors.red, fontSize: 11),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.load(),
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.purple),
-              child: const Text('重新載入',
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text('貓咪圖鑑', style: AppTextStyles.heading2),
+          leading: const BackButton(color: AppColors.text),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('😿', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 12),
+              Text('載入失敗，請下拉重試',
+                  style: TextStyle(color: AppColors.textSub, fontSize: 14)),
+              const SizedBox(height: 8),
+              Text(provider.error!,
+                  style: const TextStyle(color: AppColors.red, fontSize: 11),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => provider.load(),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppColors.purple),
+                child: const Text('重新載入',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -138,57 +156,62 @@ class _CollectionScreenState extends State<CollectionScreen> {
     final owned = provider.ownedCount;
     final total = provider.totalCount;
 
-    return RefreshIndicator(
-      color: AppColors.purple,
-      onRefresh: () => provider.load(),
-      child: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.all(20),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('貓咪圖鑑', style: AppTextStyles.heading2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.purpleLight,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('已收集 $owned / $total',
-                        style: const TextStyle(
-                            color: AppColors.purple,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 180,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                mainAxisExtent: 220,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  final s = provider.species[i];
-                  final userCat = provider.ownedMap[s.id];
-                  final isLocked = !provider.ownedIds.contains(s.id);
-                  return _CatCard(
-                      species: s, userCat: userCat, isLocked: isLocked);
-                },
-                childCount: provider.species.length,
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('貓咪圖鑑', style: AppTextStyles.heading2),
+        leading: const BackButton(color: AppColors.text),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.purpleLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('已收集 $owned / $total',
+                    style: const TextStyle(
+                        color: AppColors.purple,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
               ),
             ),
           ),
         ],
+      ),
+      body: RefreshIndicator(
+        color: AppColors.purple,
+        onRefresh: () => provider.load(),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 180,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  mainAxisExtent: 220,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final s = provider.species[i];
+                    final userCat = provider.ownedMap[s.id];
+                    final isLocked = !provider.ownedIds.contains(s.id);
+                    return _CatCard(
+                        species: s, userCat: userCat, isLocked: isLocked);
+                  },
+                  childCount: provider.species.length,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
