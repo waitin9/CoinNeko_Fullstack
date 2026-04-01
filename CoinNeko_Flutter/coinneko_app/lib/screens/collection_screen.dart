@@ -7,7 +7,9 @@ import '../providers/collection_provider.dart';
 import '../models/user_model.dart';
 
 class CollectionScreen extends StatefulWidget {
-  const CollectionScreen({super.key});
+  final String? highlightCatId;
+
+  const CollectionScreen({super.key, this.highlightCatId});
 
   @override
   State<CollectionScreen> createState() => _CollectionScreenState();
@@ -24,6 +26,69 @@ class _CollectionScreenState extends State<CollectionScreen> {
         provider.load();
       }
     });
+
+    // 若帶有 highlightCatId，畫面渲染完後自動打開該貓咪詳細頁
+    if (widget.highlightCatId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _tryAutoOpenCat(widget.highlightCatId!);
+      });
+    }
+  }
+
+  /// 等資料載入完後自動打開指定貓咪的詳細視窗
+  Future<void> _tryAutoOpenCat(String catId) async {
+    // 最多等 3 秒讓資料載入
+    for (int i = 0; i < 30; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+      final provider = context.read<CollectionProvider>();
+      if (!provider.initialized) continue;
+
+      final species = provider.species.where((s) => s.id == catId).firstOrNull;
+      final userCat = provider.ownedMap[catId];
+      if (species != null && userCat != null) {
+        _showCatDetailById(species, userCat);
+        return;
+      }
+    }
+  }
+
+  void _showCatDetailById(CatSpecies species, UserCat userCat) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (_) => _CatDetailDialog(species: species, userCat: userCat),
+    );
+  }
+
+  // 從 Navigator route arguments 取得 highlightCatId（pushNamed 方式）
+  String? _getRouteHighlightId() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map && args['highlightCatId'] is String) {
+      return args['highlightCatId'] as String;
+    }
+    return widget.highlightCatId;
+  }
+
+  bool _routeAutoOpenDone = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_routeAutoOpenDone) {
+      final id = _getRouteHighlightId();
+      if (id != null && id != widget.highlightCatId) {
+        // 只處理 route 傳入的（widget 傳入的已在 initState 處理）
+        _routeAutoOpenDone = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _tryAutoOpenCat(id);
+        });
+      } else if (id != null) {
+        _routeAutoOpenDone = true;
+      }
+    }
   }
 
   @override
@@ -144,7 +209,7 @@ class _CatCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (_) => _CatDetailDialog(species: species, userCat: userCat!),
     );
   }
@@ -288,7 +353,7 @@ class _CatCard extends StatelessWidget {
         ),
 
         // 3. 暗化遮罩
-        Container(color: Colors.black.withOpacity(0.42)),
+        Container(color: Colors.black.withValues(alpha: 0.42)),
 
         // 4. 問號 + 文字
         const Center(
@@ -406,7 +471,7 @@ class _CatDetailDialogState extends State<_CatDetailDialog>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: _glow.withOpacity(0.45),
+                    color: _glow.withValues(alpha: 0.45),
                     blurRadius: 36,
                     spreadRadius: 2,
                   ),
@@ -455,7 +520,7 @@ class _CatDetailDialogState extends State<_CatDetailDialog>
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                    color: _glow.withOpacity(0.5),
+                                    color: _glow.withValues(alpha: 0.5),
                                     blurRadius: 8)
                               ],
                             ),
@@ -524,10 +589,10 @@ class _CatDetailDialogState extends State<_CatDetailDialog>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.06),
+                                color: Colors.white.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: Colors.white.withOpacity(0.08)),
+                                    color: Colors.white.withValues(alpha: 0.08)),
                               ),
                               child: Text(s.description,
                                   textAlign: TextAlign.center,

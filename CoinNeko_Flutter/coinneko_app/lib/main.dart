@@ -7,6 +7,8 @@ import 'providers/collection_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/collection_screen.dart';
+
 
 void main() {
   runApp(const CoinNekoApp());
@@ -36,6 +38,9 @@ class CoinNekoApp extends StatelessWidget {
               theme: AppTheme.theme,
               debugShowCheckedModeBanner: false,
               home: const _RootNavigator(),
+              routes: {
+                '/collection': (context) => const CollectionScreen(),
+              },
             ),
           );
         },

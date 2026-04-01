@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen>
       password: _loginPasswordCtrl.text,
     );
     if (error != null && mounted) {
-      _showErrorDialog(error);
+      _showErrorDialog('帳號或密碼錯誤，請重新輸入！');
     }
   }
 

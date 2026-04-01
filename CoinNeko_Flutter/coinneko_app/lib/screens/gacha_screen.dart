@@ -164,7 +164,7 @@ class _GachaScreenState extends State<GachaScreen>
         child: Container(
           width: r * 2, height: r * 2,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(rng.nextDouble() * 0.4 + 0.1),
+            color: Colors.white.withValues(alpha: rng.nextDouble() * 0.4 + 0.1),
             shape: BoxShape.circle,
           ),
         ),
@@ -212,12 +212,12 @@ class _GachaScreenState extends State<GachaScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFB085FF).withOpacity(0.35),
+                    color: const Color(0xFFB085FF).withValues(alpha: 0.35),
                     blurRadius: 60,
                     spreadRadius: 20,
                   ),
                   BoxShadow(
-                    color: const Color(0xFF7C4DFF).withOpacity(0.20),
+                    color: const Color(0xFF7C4DFF).withValues(alpha: 0.20),
                     blurRadius: 100,
                     spreadRadius: 40,
                   ),
@@ -287,8 +287,8 @@ class _GachaScreenState extends State<GachaScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.red.withOpacity(0.18),
-        border: Border.all(color: AppColors.red.withOpacity(0.4)),
+        color: AppColors.red.withValues(alpha: 0.18),
+        border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text('❌ $_error',
@@ -306,9 +306,9 @@ class _GachaScreenState extends State<GachaScreen>
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.15)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,7 +467,7 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: _glow.withOpacity(0.55), blurRadius: 42, spreadRadius: 4)],
+        boxShadow: [BoxShadow(color: _glow.withValues(alpha: 0.55), blurRadius: 42, spreadRadius: 4)],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -514,9 +514,9 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.07),
+      color: Colors.white.withValues(alpha: 0.7),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withOpacity(0.10)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
     ),
     child: Text(cat.description, textAlign: TextAlign.center,
         style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7)),
@@ -526,30 +526,69 @@ class _GachaResultOverlayState extends State<_GachaResultOverlay>
     final dupeText = widget.result.starUp
         ? '✨ 重複！升至 ${widget.result.newStarLevel} 星  +${widget.result.coinsBonus} 🪙'
         : '✨ 已達 5 星上限！換取 ${widget.result.coinsBonus} 🪙';
+    final catId = widget.result.cat.id;
+
     return Column(children: [
+      // ── 升星提示 Badge（靜態標籤，非按鈕）──
       if (isDupe) ...[
-        ScaleTransition(scale: _pulse,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFFFB800), Color(0xFFFF7A00)]),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.5), blurRadius: 22, spreadRadius: 2)],
-            ),
-            child: Text(dupeText, textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Nunito', fontWeight: FontWeight.w900, fontSize: 15)),
-          )),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFB800).withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFB800).withValues(alpha: 0.45)),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const SizedBox(width: 4),
+            Flexible(child: Text(dupeText, textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFFFD54F),
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ))),
+          ]),
+        ),
         const SizedBox(height: 12),
       ],
-      SizedBox(width: double.infinity, height: 52,
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
-          child: const Text('繼續抽！🎰',
-              style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w900, fontSize: 17)),
-        )),
+
+      // ── 兩個操作按鈕並排 ──
+      Row(children: [
+        // 繼續抽
+        Expanded(child: SizedBox(height: 52,
+          child: ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 0,
+            ),
+            child: const Text('繼續抽 🎰',
+                style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w900, fontSize: 15)),
+          ))),
+        const SizedBox(width: 10),
+        // 前往圖鑑
+        Expanded(child: SizedBox(height: 52,
+          child: OutlinedButton(
+            onPressed: () {
+              // 關閉結果頁，然後導航到圖鑑並帶 catId
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed(
+                '/collection',
+                arguments: {'highlightCatId': catId},
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white54, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text('前往圖鑑 📖',
+                style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w800, fontSize: 15)),
+          ))),
+      ]),
     ]);
   }
 
@@ -589,7 +628,7 @@ class _StarburstPainter extends CustomPainter {
       final path = Path()..moveTo(cx, cy)
         ..lineTo(cx + r * math.cos(a1), cy + r * math.sin(a1))
         ..lineTo(cx + r * math.cos(a2), cy + r * math.sin(a2))..close();
-      p.color = color.withOpacity(i % 2 == 0 ? 0.20 : 0.09);
+      p.color = color.withValues(alpha: i % 2 == 0 ? 0.20 : 0.09);
       canvas.drawPath(path, p);
     }
   }
@@ -615,7 +654,7 @@ class _SmallBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
     decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: glow.withOpacity(0.5), blurRadius: 12)]),
+        boxShadow: [BoxShadow(color: glow.withValues(alpha: 0.5), blurRadius: 12)]),
     child: Text(text, style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w900, fontSize: 12, color: fg)));
 }
 
@@ -633,9 +672,9 @@ class _GlassChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(AppRadius.badge),
-          border: Border.all(color: color.withOpacity(0.35)),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
         ),
         child: Text('$emoji $label',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
@@ -673,7 +712,7 @@ class _JuicyButton extends StatelessWidget {
               color: enabled ? null : Colors.white12,
               borderRadius: BorderRadius.circular(18),
               boxShadow: enabled ? [
-                BoxShadow(color: glowColor.withOpacity(0.45), blurRadius: 20, offset: const Offset(0, 6)),
+                BoxShadow(color: glowColor.withValues(alpha: 0.45), blurRadius: 20, offset: const Offset(0, 6)),
               ] : [],
             ),
             child: isLoading
